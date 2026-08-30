@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
-import pool from "@/lib/db";
+import {
+  getShipmentByTrackingNumber,
+  getTrackingHistory,
+} from "@/lib/firebaseShipments";
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const trackingNumber = searchParams.get("number");
+    const trackingNumber = searchParams.get("number")?.trim();
 
     if (!trackingNumber) {
       return NextResponse.json(
@@ -13,58 +16,21 @@ export async function GET(request: Request) {
       );
     }
 
-    const [shipmentRows] = await pool.execute(
-      `
-      SELECT
-  id,
-  tracking_number,
-  customer_name,
-  origin,
-  destination,
-  current_status,
-  created_at,
-  origin_lat,
-  origin_lng,
-  destination_lat,
-  destination_lng,
-  current_lat,
-  current_lng
-FROM shipments
-      WHERE tracking_number = ?
-      LIMIT 1
-      `,
-      [trackingNumber.trim()]
-    );
+    const shipment =
+      await getShipmentByTrackingNumber(trackingNumber);
 
-    const shipments = shipmentRows as any[];
-
-    if (shipments.length === 0) {
+    if (!shipment) {
       return NextResponse.json(
         { error: "Shipment not found." },
         { status: 404 }
       );
     }
 
-    const shipment = shipments[0];
-
-    const [historyRows] = await pool.execute(
-      `
-      SELECT
-        id,
-        status,
-        location,
-        description,
-        created_at
-      FROM tracking_history
-      WHERE shipment_id = ?
-      ORDER BY created_at ASC
-      `,
-      [shipment.id]
-    );
+    const history = await getTrackingHistory(shipment.id);
 
     return NextResponse.json({
       shipment,
-      history: historyRows,
+      history,
     });
   } catch (error) {
     console.error("Tracking API error:", error);

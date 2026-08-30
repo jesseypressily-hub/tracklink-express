@@ -1,27 +1,18 @@
 import { NextResponse } from "next/server";
-import pool from "@/lib/db";
+import { getShipments } from "@/lib/firebaseShipments";
 
 export async function GET() {
   try {
-    const [rows] = await pool.execute(`
-      SELECT
-        id,
-        tracking_number,
-        customer_name,
-        origin,
-        destination,
-        current_status,
-        created_at
-      FROM shipments
-      ORDER BY created_at DESC
-    `);
+    const shipments = await getShipments();
 
-    return NextResponse.json(rows);
+    return NextResponse.json(shipments);
   } catch (error) {
-    console.error("Admin shipments error:", error);
+    console.error("Firebase admin shipments error:", error);
 
     return NextResponse.json(
-      { error: "Unable to load shipments." },
+      {
+        error: "Unable to load shipments.",
+      },
       { status: 500 }
     );
   }

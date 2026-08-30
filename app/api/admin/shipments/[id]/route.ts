@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import pool from "@/lib/db";
+import {
+  getShipmentById,
+  updateShipment,
+  addTrackingHistory,
+} from "@/lib/firebaseShipments";
 
 type RouteContext = {
   params: Promise<{
@@ -15,35 +19,9 @@ export async function GET(
   try {
     const { id } = await context.params;
 
-    const shipmentId = Number(id);
+    const shipment = await getShipmentById(id);
 
-    if (!Number.isInteger(shipmentId)) {
-      return NextResponse.json(
-        { error: "Invalid shipment ID." },
-        { status: 400 }
-      );
-    }
-
-    const [rows] = await pool.execute(
-      `
-      SELECT
-        id,
-        tracking_number,
-        customer_name,
-        origin,
-        destination,
-        current_status,
-        created_at
-      FROM shipments
-      WHERE id = ?
-      LIMIT 1
-      `,
-      [shipmentId]
-    );
-
-    const shipments = rows as any[];
-
-    if (shipments.length === 0) {
+    if (!shipment) {
       return NextResponse.json(
         { error: "Shipment not found." },
         { status: 404 }
@@ -51,10 +29,13 @@ export async function GET(
     }
 
     return NextResponse.json({
-      shipment: shipments[0],
+      shipment,
     });
   } catch (error) {
-    console.error("Get shipment error:", error);
+    console.error(
+      "Firebase get shipment error:",
+      error
+    );
 
     return NextResponse.json(
       { error: "Unable to load shipment." },
@@ -63,30 +44,29 @@ export async function GET(
   }
 }
 
-// PATCH — Update shipment status
+// PATCH — Update shipment
 export async function PATCH(
   request: Request,
   context: RouteContext
 ) {
-  const connection = await pool.getConnection();
-
   try {
     const { id } = await context.params;
-
-    const shipmentId = Number(id);
-
-    if (!Number.isInteger(shipmentId)) {
-      return NextResponse.json(
-        { error: "Invalid shipment ID." },
-        { status: 400 }
-      );
-    }
 
     const body = await request.json();
 
     const status = body.status?.trim();
     const location = body.location?.trim();
     const description = body.description?.trim();
+
+    const currentLat =
+      typeof body.currentLat === "number"
+        ? body.currentLat
+        : undefined;
+
+    const currentLng =
+      typeof body.currentLng === "number"
+        ? body.currentLng
+        : undefined;
 
     if (!status) {
       return NextResponse.json(
@@ -95,77 +75,39 @@ export async function PATCH(
       );
     }
 
-    await connection.beginTransaction();
+    const shipment = await getShipmentById(id);
 
-    // Check that shipment exists
-    const [shipmentRows] = await connection.execute(
-      `
-      SELECT
-        id,
-        tracking_number,
-        origin,
-        destination
-      FROM shipments
-      WHERE id = ?
-      LIMIT 1
-      `,
-      [shipmentId]
-    );
-
-    const shipments = shipmentRows as any[];
-
-    if (shipments.length === 0) {
-      await connection.rollback();
-
+    if (!shipment) {
       return NextResponse.json(
         { error: "Shipment not found." },
         { status: 404 }
       );
     }
 
-    const shipment = shipments[0];
+    await updateShipment(id, {
+      currentStatus: status,
+      currentLat,
+      currentLng,
+    });
 
-    // Update current shipment status
-    await connection.execute(
-      `
-      UPDATE shipments
-      SET current_status = ?
-      WHERE id = ?
-      `,
-      [status, shipmentId]
-    );
-
-    // Add tracking history event
-    await connection.execute(
-      `
-      INSERT INTO tracking_history
-      (
-        shipment_id,
-        status,
-        location,
-        description
-      )
-      VALUES (?, ?, ?, ?)
-      `,
-      [
-        shipmentId,
-        status,
-        location || shipment.origin,
+    await addTrackingHistory({
+      shipmentId: id,
+      status,
+      location: location || shipment.origin,
+      description:
         description ||
-          `Shipment status updated to ${status}.`,
-      ]
-    );
-
-    await connection.commit();
+        `Shipment status updated to ${status}.`,
+    });
 
     return NextResponse.json({
       success: true,
       message: "Shipment updated successfully.",
     });
   } catch (error) {
-    await connection.rollback();
-
-    console.error("Update shipment error:", error);
+    console.error(
+      "Firebase update shipment error:",
+      error
+    );
 
     return NextResponse.json(
       {
@@ -173,7 +115,5 @@ export async function PATCH(
       },
       { status: 500 }
     );
-  } finally {
-    connection.release();
   }
 }

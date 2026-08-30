@@ -3,15 +3,24 @@
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Loader2, Save, Package } from "lucide-react";
+import LocationSearch from "@/components/LocationSearch";
 
 type Shipment = {
-  id: number;
+  id: string;
   tracking_number: string;
   customer_name: string;
   origin: string;
   destination: string;
   current_status: string;
   created_at: string;
+  current_lat?: number | null;
+  current_lng?: number | null;
+};
+
+type SelectedLocation = {
+  name: string;
+  latitude: number;
+  longitude: number;
 };
 
 const STATUS_OPTIONS = [
@@ -25,12 +34,15 @@ const STATUS_OPTIONS = [
 
 export default function ShipmentManagementPage() {
   const [shipment, setShipment] = useState<Shipment | null>(null);
+
   const [status, setStatus] = useState("");
-  const [location, setLocation] = useState("");
+  const [location, setLocation] = useState<SelectedLocation | null>(null);
   const [description, setDescription] = useState("");
+
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -56,15 +68,42 @@ export default function ShipmentManagementPage() {
         return;
       }
 
-      setShipment(data.shipment);
-      setStatus(data.shipment.current_status);
-      setLocation(data.shipment.origin);
+      const loadedShipment = data.shipment;
+
+      setShipment(loadedShipment);
+      setStatus(loadedShipment.current_status);
+     if (
+  loadedShipment.current_lat !== null &&
+  loadedShipment.current_lat !== undefined &&
+  loadedShipment.current_lng !== null &&
+  loadedShipment.current_lng !== undefined
+) {
+  setLocation({
+    name: loadedShipment.origin,
+    latitude: Number(loadedShipment.current_lat),
+    longitude: Number(loadedShipment.current_lng),
+  });
+}
+
+      if (
+  loadedShipment.current_lat !== null &&
+  loadedShipment.current_lat !== undefined &&
+  loadedShipment.current_lng !== null &&
+  loadedShipment.current_lng !== undefined
+) {
+  setLocation({
+    name: loadedShipment.origin,
+    latitude: Number(loadedShipment.current_lat),
+    longitude: Number(loadedShipment.current_lng),
+  });
+}
     } catch {
       setError("Unable to connect to the server.");
     } finally {
       setLoading(false);
     }
   }
+
 
   async function updateShipment(
     event: FormEvent<HTMLFormElement>
@@ -79,10 +118,10 @@ export default function ShipmentManagementPage() {
       return;
     }
 
-    if (!location.trim()) {
-      setError("Please enter the shipment location.");
-      return;
-    }
+    if (!location) {
+  setError("Please select a shipment location.");
+  return;
+}
 
     try {
       setSaving(true);
@@ -98,10 +137,12 @@ export default function ShipmentManagementPage() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            status,
-            location,
-            description,
-          }),
+  status,
+  location: location.name,
+  description,
+  currentLat: location.latitude,
+  currentLng: location.longitude,
+}),
         }
       );
 
@@ -184,6 +225,8 @@ export default function ShipmentManagementPage() {
       </header>
 
       <div className="mx-auto max-w-5xl px-5 py-8 sm:px-6 lg:px-8">
+
+        {/* Shipment Information */}
         <div className="rounded-2xl bg-white p-6 shadow-sm sm:p-8">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -253,13 +296,14 @@ export default function ShipmentManagementPage() {
           </div>
         </div>
 
+        {/* Update Shipment */}
         <div className="mt-8 rounded-2xl bg-white p-6 shadow-sm sm:p-8">
           <h2 className="text-xl font-bold text-[var(--navy)]">
             Update Shipment
           </h2>
 
           <p className="mt-1 text-sm text-gray-500">
-            Update the shipment status and add a tracking event.
+            Update the shipment status and current location.
           </p>
 
           {message && (
@@ -278,6 +322,7 @@ export default function ShipmentManagementPage() {
             onSubmit={updateShipment}
             className="mt-6 space-y-5"
           >
+            {/* Status */}
             <div>
               <label className="mb-2 block text-sm font-bold text-gray-700">
                 Shipment Status
@@ -298,22 +343,38 @@ export default function ShipmentManagementPage() {
               </select>
             </div>
 
+            {/* Current Location */}
             <div>
-              <label className="mb-2 block text-sm font-bold text-gray-700">
-                Current Location
-              </label>
+  <label className="mb-2 block text-sm font-bold text-gray-700">
+    Current Location
+  </label>
 
-              <input
-                type="text"
-                value={location}
-                onChange={(event) =>
-                  setLocation(event.target.value)
-                }
-                placeholder="Los Angeles, CA"
-                className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-[var(--blue)] focus:ring-4 focus:ring-blue-100"
-              />
-            </div>
+  <LocationSearch
+  label="Current Location"
+  value={location}
+  onChange={setLocation}
+  placeholder="Search current shipment location..."
+/>
 
+  {location && (
+    <div className="mt-3 rounded-xl bg-blue-50 p-3 text-xs text-blue-700">
+      <p className="font-bold">
+        Selected location
+      </p>
+
+      <p className="mt-1">
+        {location.name}
+      </p>
+
+      <p className="mt-1">
+        Coordinates:{" "}
+        {location.latitude.toFixed(6)},{" "}
+        {location.longitude.toFixed(6)}
+      </p>
+    </div>
+  )}
+</div>
+            {/* Description */}
             <div>
               <label className="mb-2 block text-sm font-bold text-gray-700">
                 Update Description

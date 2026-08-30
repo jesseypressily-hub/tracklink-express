@@ -1,29 +1,23 @@
 import { NextResponse } from "next/server";
-import pool from "@/lib/db";
-import { locationCoordinates } from "@/lib/locationCoordinates";
+import {
+  createShipment,
+  addTrackingHistory,
+} from "@/lib/firebaseShipments";
 
 export async function POST(request: Request) {
-  const connection = await pool.getConnection();
-
   try {
     const body = await request.json();
 
     const customerName = body.customerName?.trim();
     const origin = body.origin?.trim();
     const destination = body.destination?.trim();
-    const status = body.status?.trim() || "Shipment Created";
-    const originCoordinates = locationCoordinates[origin];
-const destinationCoordinates = locationCoordinates[destination];
+    const status =
+      body.status?.trim() || "Shipment Created";
 
-if (!originCoordinates || !destinationCoordinates) {
-  return NextResponse.json(
-    {
-      error:
-        "Location not supported yet. Please use a supported location.",
-    },
-    { status: 400 }
-  );
-}
+    const originLat = Number(body.originLat);
+    const originLng = Number(body.originLng);
+    const destinationLat = Number(body.destinationLat);
+    const destinationLng = Number(body.destinationLng);
 
     if (!customerName || !origin || !destination) {
       return NextResponse.json(
@@ -35,29 +29,46 @@ if (!originCoordinates || !destinationCoordinates) {
       );
     }
 
-    await connection.beginTransaction();
+    if (
+      !Number.isFinite(originLat) ||
+      !Number.isFinite(originLng) ||
+      !Number.isFinite(destinationLat) ||
+      !Number.isFinite(destinationLng)
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Valid coordinates are required for the origin and destination.",
+        },
+        { status: 400 }
+      );
+    }
 
-    // Get the latest tracking number
-    const [rows] = await connection.execute(`
-      SELECT tracking_number
-      FROM shipments
-      WHERE tracking_number LIKE 'TLX-%'
-      ORDER BY id DESC
-      LIMIT 1
-      FOR UPDATE
-    `);
+    /*
+     * Get existing shipments to determine the next
+     * TrackLink Express tracking number.
+     *
+     * Example:
+     * TLX-2026-100482
+     */
+    const { db } = await import("@/lib/firebaseAdmin");
 
-    const latest = rows as {
-      tracking_number: string;
-    }[];
+    const snapshot = await db
+      .collection("shipments")
+      .orderBy("trackingNumber", "desc")
+      .limit(1)
+      .get();
 
-    let nextNumber = 1;
+    let nextNumber = 100;
 
-    if (latest.length > 0) {
-      const parts = latest[0].tracking_number.split("-");
+    if (!snapshot.empty) {
+      const latestTracking =
+        snapshot.docs[0].data().trackingNumber;
+
+      const parts = latestTracking.split("-");
       const lastNumber = Number(parts[parts.length - 1]);
 
-      if (!Number.isNaN(lastNumber)) {
+      if (Number.isFinite(lastNumber)) {
         nextNumber = lastNumber + 1;
       }
     }
@@ -68,63 +79,33 @@ if (!originCoordinates || !destinationCoordinates) {
       nextNumber
     ).padStart(6, "0")}`;
 
-    // Create shipment
-    const [result] = await connection.execute(
-      `
-      INSERT INTO shipments
-(
-  tracking_number,
-  customer_name,
-  origin,
-  destination,
-  current_status,
-  origin_lat,
-  origin_lng,
-  destination_lat,
-  destination_lng,
-  current_lat,
-  current_lng
-)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `,
-      [
-  trackingNumber,
-  customerName,
-  origin,
-  destination,
-  status,
-  originCoordinates.lat,
-  originCoordinates.lng,
-  destinationCoordinates.lat,
-  destinationCoordinates.lng,
-  originCoordinates.lat,
-  originCoordinates.lng,
-]
-    );
+    /*
+     * Current location starts at the origin.
+     */
+    const shipmentId = await createShipment({
+      trackingNumber,
+      customerName,
+      origin,
+      destination,
+      currentStatus: status,
 
-    const shipmentId = (result as any).insertId;
+      originLat,
+      originLng,
 
-    // Create first tracking history event
-    await connection.execute(
-      `
-      INSERT INTO tracking_history
-      (
-        shipment_id,
-        status,
-        location,
-        description
-      )
-      VALUES (?, ?, ?, ?)
-      `,
-      [
-        shipmentId,
-        status,
-        origin,
+      destinationLat,
+      destinationLng,
+
+      currentLat: originLat,
+      currentLng: originLng,
+    });
+
+    await addTrackingHistory({
+      shipmentId,
+      status,
+      location: origin,
+      description:
         `Shipment created and registered at ${origin}.`,
-      ]
-    );
-
-    await connection.commit();
+    });
 
     return NextResponse.json(
       {
@@ -135,9 +116,10 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       { status: 201 }
     );
   } catch (error) {
-    await connection.rollback();
-
-    console.error("Create shipment error:", error);
+    console.error(
+      "Firebase create shipment error:",
+      error
+    );
 
     return NextResponse.json(
       {
@@ -145,7 +127,5 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       },
       { status: 500 }
     );
-  } finally {
-    connection.release();
   }
 }

@@ -1,17 +1,27 @@
 "use client";
 
+import { FormEvent, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Mail,
   MapPin,
   Phone,
   ArrowRight,
+  Calculator,
 } from "lucide-react";
 import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 
+
 export default function ContactPage() {
+  const [quoteSent, setQuoteSent] = useState(false);
+
+  function handleQuoteSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setQuoteSent(true);
+  }
+
   return (
     <>
       <Navbar />
@@ -150,6 +160,241 @@ export default function ContactPage() {
             </div>
           </div>
         </section>
+        ```tsx
+{/* Get a Quote */}
+<section className="bg-[var(--light-gray)] px-5 py-20 sm:px-6 lg:px-8 lg:py-28">
+  <div className="mx-auto max-w-6xl">
+
+    <div className="mx-auto max-w-3xl text-center">
+      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-100 text-[var(--blue)]">
+        <Calculator size={28} />
+      </div>
+
+      <p className="mt-6 text-sm font-bold uppercase tracking-[0.2em] text-[var(--blue)]">
+        Get a Quote
+      </p>
+
+      <h2 className="mt-3 text-3xl font-extrabold text-[var(--navy)] sm:text-4xl">
+        Get a shipping estimate
+      </h2>
+
+      <p className="mt-5 text-base leading-7 text-gray-600">
+        Tell us about your shipment and our team will review your
+        request and provide a shipping estimate.
+      </p>
+    </div>
+
+    <div className="mt-12 rounded-3xl bg-white p-6 shadow-xl ring-1 ring-gray-200 sm:p-8 lg:p-10">
+
+     <form
+  onSubmit={handleQuoteSubmit}
+  className="grid gap-6 md:grid-cols-2"
+>
+
+        {/* Full Name */}
+        <div>
+          <label
+            htmlFor="quote-name"
+            className="mb-2 block text-sm font-bold text-[var(--navy)]"
+          >
+            Full Name
+          </label>
+
+          <input
+            id="quote-name"
+            type="text"
+            placeholder="John Doe"
+            className="w-full rounded-xl border border-gray-300 px-4 py-3.5 text-sm outline-none transition focus:border-[var(--blue)] focus:ring-4 focus:ring-blue-100"
+          />
+        </div>
+
+        {/* Email */}
+        <div>
+          <label
+            htmlFor="quote-email"
+            className="mb-2 block text-sm font-bold text-[var(--navy)]"
+          >
+            Email Address
+          </label>
+
+          <input
+            id="quote-email"
+            type="email"
+            placeholder="john@example.com"
+            className="w-full rounded-xl border border-gray-300 px-4 py-3.5 text-sm outline-none transition focus:border-[var(--blue)] focus:ring-4 focus:ring-blue-100"
+          />
+        </div>
+
+        {/* Phone */}
+        <div>
+          <label
+            htmlFor="quote-phone"
+            className="mb-2 block text-sm font-bold text-[var(--navy)]"
+          >
+            Phone Number
+          </label>
+
+          <input
+            id="quote-phone"
+            type="tel"
+            placeholder="+1 (800) 555-0147"
+            className="w-full rounded-xl border border-gray-300 px-4 py-3.5 text-sm outline-none transition focus:border-[var(--blue)] focus:ring-4 focus:ring-blue-100"
+          />
+        </div>
+
+        {/* Service */}
+        <div>
+          <label
+            htmlFor="quote-service"
+            className="mb-2 block text-sm font-bold text-[var(--navy)]"
+          >
+            Service Type
+          </label>
+
+          <select
+            id="quote-service"
+            defaultValue=""
+            className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3.5 text-sm outline-none transition focus:border-[var(--blue)] focus:ring-4 focus:ring-blue-100"
+          >
+            <option value="" disabled>
+              Select a service
+            </option>
+            <option value="express">
+              Express Delivery
+            </option>
+            <option value="standard">
+              Standard Delivery
+            </option>
+            <option value="international">
+              International Shipping
+            </option>
+            <option value="freight">
+              Freight & Cargo
+            </option>
+            <option value="warehousing">
+              Warehousing
+            </option>
+          </select>
+        </div>
+
+        {/* Origin */}
+        <div>
+          <label
+            htmlFor="quote-origin"
+            className="mb-2 block text-sm font-bold text-[var(--navy)]"
+          >
+            Pickup Location
+          </label>
+
+          <input
+            id="quote-origin"
+            type="text"
+            placeholder="Los Angeles, CA"
+            className="w-full rounded-xl border border-gray-300 px-4 py-3.5 text-sm outline-none transition focus:border-[var(--blue)] focus:ring-4 focus:ring-blue-100"
+          />
+        </div>
+
+        {/* Destination */}
+        <div>
+          <label
+            htmlFor="quote-destination"
+            className="mb-2 block text-sm font-bold text-[var(--navy)]"
+          >
+            Destination
+          </label>
+
+          <input
+            id="quote-destination"
+            type="text"
+            placeholder="New York, NY"
+            className="w-full rounded-xl border border-gray-300 px-4 py-3.5 text-sm outline-none transition focus:border-[var(--blue)] focus:ring-4 focus:ring-blue-100"
+          />
+        </div>
+
+        {/* Package Type */}
+        <div>
+          <label
+            htmlFor="quote-package"
+            className="mb-2 block text-sm font-bold text-[var(--navy)]"
+          >
+            Package Type
+          </label>
+
+          <select
+            id="quote-package"
+            defaultValue=""
+            className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3.5 text-sm outline-none transition focus:border-[var(--blue)] focus:ring-4 focus:ring-blue-100"
+          >
+            <option value="" disabled>
+              Select package type
+            </option>
+            <option value="documents">Documents</option>
+            <option value="parcel">Parcel</option>
+            <option value="box">Box</option>
+            <option value="pallet">Pallet</option>
+            <option value="freight">Freight</option>
+          </select>
+        </div>
+
+        {/* Weight */}
+        <div>
+          <label
+            htmlFor="quote-weight"
+            className="mb-2 block text-sm font-bold text-[var(--navy)]"
+          >
+            Estimated Weight
+          </label>
+
+          <input
+            id="quote-weight"
+            type="number"
+            min="0"
+            placeholder="e.g. 5 kg"
+            className="w-full rounded-xl border border-gray-300 px-4 py-3.5 text-sm outline-none transition focus:border-[var(--blue)] focus:ring-4 focus:ring-blue-100"
+          />
+        </div>
+
+        {/* Additional Details */}
+        <div className="md:col-span-2">
+          <label
+            htmlFor="quote-message"
+            className="mb-2 block text-sm font-bold text-[var(--navy)]"
+          >
+            Additional Details
+          </label>
+
+          <textarea
+            id="quote-message"
+            rows={5}
+            placeholder="Tell us anything else we should know about your shipment..."
+            className="w-full resize-none rounded-xl border border-gray-300 px-4 py-3.5 text-sm outline-none transition focus:border-[var(--blue)] focus:ring-4 focus:ring-blue-100"
+          />
+        </div>
+
+        {/* Submit */}
+        <div className="md:col-span-2">
+          <button
+            type="submit"
+            className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--blue)] px-7 py-4 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:shadow-lg sm:w-auto"
+          >
+            Request a Quote
+            <ArrowRight
+              size={17}
+              className="transition-transform duration-300 group-hover:translate-x-1"
+            />
+          </button>
+        </div>
+
+      </form>
+      {quoteSent && (
+  <div className="mt-6 rounded-xl border border-green-200 bg-green-50 p-4 text-sm font-semibold text-green-700">
+    Your quote request has been received. Our team will review your
+    shipment details and get back to you shortly.
+  </div>
+)}
+    </div>
+  </div>
+</section>
         {/* Contact Form */}
 <section className="bg-white px-5 py-20 sm:px-6 lg:px-8 lg:py-28">
   <div className="mx-auto max-w-6xl">

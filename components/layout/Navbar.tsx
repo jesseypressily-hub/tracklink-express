@@ -21,11 +21,40 @@ export default function Navbar() {
 
         {/* Logo */}
         <Link
-          href="#"
-          className="text-xl font-extrabold tracking-tight text-[var(--navy)] sm:text-2xl"
+          href="/"
+          aria-label="TrackLink Express home"
+          className="group flex items-center"
         >
-          TrackLink
-          <span className="text-[var(--blue)]"> Express</span>
+          <div className="leading-none">
+            <div className="flex items-baseline">
+              <span
+                className="text-[1.65rem] font-black tracking-[-0.06em] text-[var(--navy)] sm:text-[1.9rem]"
+                style={{
+                  fontFamily:
+                    "Arial Black, Arial, Helvetica, sans-serif",
+                }}
+              >
+                TrackLink
+              </span>
+
+              <span
+                className="ml-1 text-[1.65rem] font-black tracking-[-0.055em] text-[var(--blue)] sm:text-[1.9rem]"
+                style={{
+                  fontFamily:
+                    "Arial Black, Arial, Helvetica, sans-serif",
+                }}
+              >
+                Express
+              </span>
+            </div>
+
+            <div className="mt-1 flex items-center gap-1.5">
+              <span className="h-[3px] w-8 rounded-full bg-[var(--blue)] transition-all duration-300 group-hover:w-11" />
+              <span className="text-[8px] font-bold uppercase tracking-[0.28em] text-gray-400">
+                Logistics & Delivery
+              </span>
+            </div>
+          </div>
         </Link>
 
         {/* Desktop Navigation */}

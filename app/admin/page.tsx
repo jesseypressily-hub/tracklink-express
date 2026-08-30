@@ -12,16 +12,25 @@ import {
   X,
 } from "lucide-react";
 import AdminNav from "./components/AdminNav";
+import LocationSearch, {
+  SelectedLocation,
+} from "@/components/LocationSearch";
+import ShipmentReceipt from "@/components/admin/ShipmentReceipt";
 type Shipment = {
-  id: number;
-  tracking_number: string;
-  customer_name: string;
+  id: string;
+  trackingNumber: string;
+  customerName: string;
   origin: string;
   destination: string;
-  current_status: string;
-  created_at: string;
+  currentStatus: string;
+  createdAt: string;
+  originLat: number;
+  originLng: number;
+  destinationLat: number;
+  destinationLng: number;
+  currentLat: number;
+  currentLng: number;
 };
-
 export default function AdminPage() {
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -31,12 +40,23 @@ export default function AdminPage() {
   const [creating, setCreating] = useState(false);
 
   const [customerName, setCustomerName] = useState("");
-  const [origin, setOrigin] = useState("");
-  const [destination, setDestination] = useState("");
+ const [origin, setOrigin] =
+  useState<SelectedLocation | null>(null);
+
+const [destination, setDestination] =
+  useState<SelectedLocation | null>(null);
   const [status, setStatus] = useState("Shipment Created");
 
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [receipt, setReceipt] = useState<{
+  trackingNumber: string;
+  customerName: string;
+  origin: string;
+  destination: string;
+  status: string;
+  createdAt: string;
+} | null>(null);
 
   useEffect(() => {
     loadShipments();
@@ -70,15 +90,15 @@ export default function AdminPage() {
       return;
     }
 
-    if (!origin.trim()) {
-      setError("Please enter the shipment origin.");
-      return;
-    }
+    if (!origin) {
+  setError("Please select the shipment origin.");
+  return;
+}
 
-    if (!destination.trim()) {
-      setError("Please enter the shipment destination.");
-      return;
-    }
+if (!destination) {
+  setError("Please select the shipment destination.");
+  return;
+}
 
     try {
       setCreating(true);
@@ -91,11 +111,15 @@ export default function AdminPage() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            customerName,
-            origin,
-            destination,
-            status,
-          }),
+  customerName,
+  origin: origin.name,
+  destination: destination.name,
+  originLat: origin.latitude,
+  originLng: origin.longitude,
+  destinationLat: destination.latitude,
+  destinationLng: destination.longitude,
+  status,
+}),
         }
       );
 
@@ -107,15 +131,24 @@ export default function AdminPage() {
       }
 
       setMessage(
-        `Shipment created successfully: ${data.trackingNumber}`
-      );
+  `Shipment created successfully: ${data.trackingNumber}`
+);
 
-      setCustomerName("");
-      setOrigin("");
-      setDestination("");
-      setStatus("Shipment Created");
+setReceipt({
+  trackingNumber: data.trackingNumber,
+  customerName,
+  origin: origin.name,
+  destination: destination.name,
+  status,
+  createdAt: new Date().toISOString(),
+});
 
-      await loadShipments();
+setCustomerName("");
+setOrigin(null);
+setDestination(null);
+setStatus("Shipment Created");
+
+await loadShipments();
 
     } catch {
       setError("Unable to connect to the server.");
@@ -133,10 +166,10 @@ export default function AdminPage() {
 
     return shipments.filter(
       (shipment) =>
-        shipment.tracking_number
+        shipment.trackingNumber
           .toLowerCase()
           .includes(query) ||
-        shipment.customer_name
+        shipment.customerName
           .toLowerCase()
           .includes(query)
     );
@@ -146,19 +179,19 @@ export default function AdminPage() {
 
   const inTransit = shipments.filter(
     (shipment) =>
-      shipment.current_status.toLowerCase() ===
+      shipment.currentStatus.toLowerCase() ===
       "shipment in transit"
   ).length;
 
   const pending = shipments.filter(
     (shipment) =>
-      shipment.current_status.toLowerCase() ===
+      shipment.currentStatus.toLowerCase() ===
       "shipment created"
   ).length;
 
   const delivered = shipments.filter(
     (shipment) =>
-      shipment.current_status.toLowerCase() ===
+      shipment.currentStatus.toLowerCase() ===
       "delivered"
   ).length;
 
@@ -315,35 +348,21 @@ export default function AdminPage() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-bold text-gray-700">
-                  Origin
-                </label>
-
-                <input
-                  value={origin}
-                  onChange={(event) =>
-                    setOrigin(event.target.value)
-                  }
-                  type="text"
-                  placeholder="Los Angeles, CA"
-                  className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-[var(--blue)]"
-                />
+                <LocationSearch
+  label="Origin"
+  value={origin}
+  onChange={setOrigin}
+  placeholder="Search for origin city..."
+/>
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-bold text-gray-700">
-                  Destination
-                </label>
-
-                <input
-                  value={destination}
-                  onChange={(event) =>
-                    setDestination(event.target.value)
-                  }
-                  type="text"
-                  placeholder="New York, NY"
-                  className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-[var(--blue)]"
-                />
+               <LocationSearch
+  label="Destination"
+  value={destination}
+  onChange={setDestination}
+  placeholder="Search for destination city..."
+/>
               </div>
 
               <div>
@@ -480,11 +499,11 @@ export default function AdminPage() {
                       >
 
                         <td className="px-6 py-5 font-mono font-bold text-[var(--navy)]">
-                          {shipment.tracking_number}
+                          {shipment.trackingNumber}
                         </td>
 
                         <td className="px-6 py-5">
-                          {shipment.customer_name}
+                          {shipment.customerName}
                         </td>
 
                         <td className="px-6 py-5">
@@ -494,7 +513,7 @@ export default function AdminPage() {
 
                         <td className="px-6 py-5">
                           <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-700">
-                            {shipment.current_status}
+                            {shipment.currentStatus}
                           </span>
                         </td>
 
@@ -521,6 +540,17 @@ export default function AdminPage() {
         </div>
 
       </div>
+      {receipt && (
+  <ShipmentReceipt
+    trackingNumber={receipt.trackingNumber}
+    customerName={receipt.customerName}
+    origin={receipt.origin}
+    destination={receipt.destination}
+    status={receipt.status}
+    createdAt={receipt.createdAt}
+    onClose={() => setReceipt(null)}
+  />
+)}
 
     </main>
   );

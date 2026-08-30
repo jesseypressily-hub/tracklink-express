@@ -28,19 +28,19 @@ const ShipmentMap = dynamic(
 
 type Shipment = {
   id: number;
-  tracking_number: string;
-  customer_name: string;
+  trackingNumber: string;
+  customerName: string;
   origin: string;
   destination: string;
-  current_status: string;
-  created_at: string;
+  currentStatus: string;
+  createdAt: string;
 
-  origin_lat: number | null;
-  origin_lng: number | null;
-  destination_lat: number | null;
-  destination_lng: number | null;
-  current_lat: number | null;
-  current_lng: number | null;
+  originLat: number | null;
+  originLng: number | null;
+  destinationLat: number | null;
+  destinationLng: number | null;
+  currentLat: number | null;
+  currentLng: number | null;
 };
 
 type TrackingEvent = {
@@ -48,14 +48,14 @@ type TrackingEvent = {
   status: string;
   location: string;
   description: string;
-  created_at: string;
+  createdAt   : string;
 };
 
 const STATUS_ORDER = [
   "Shipment Created",
   "Package Received",
   "Departed Facility",
-  "Shipment in Transit",
+  "Shipment in Transit",    
   "Out for Delivery",
   "Delivered",
 ];
@@ -112,7 +112,7 @@ function TrackingPageContent() {
  const searchParams = useSearchParams();
 
 useEffect(() => {
-  const numberFromUrl = searchParams.get("number");
+  const numberFromUrl = searchParams.get("tracking");
 
   if (numberFromUrl) {
     setTrackingNumber(numberFromUrl);
@@ -124,7 +124,7 @@ useEffect(() => {
   ? STATUS_ORDER.findIndex(
       (status) =>
         status.toLowerCase() ===
-        shipment.current_status.toLowerCase()
+        shipment.currentStatus.toLowerCase()
     )
   : -1;
 
@@ -236,12 +236,12 @@ useEffect(() => {
                   </p>
 
                   <p className="mt-1 font-mono font-bold text-[var(--navy)]">
-                    {shipment.tracking_number}
+                    {shipment.trackingNumber}
                   </p>
                 </div>
 
                 <span className="w-fit rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-700">
-                  {shipment.current_status}
+                  {shipment.currentStatus}
                 </span>
 
               </div>
@@ -275,7 +275,7 @@ useEffect(() => {
                   </p>
 
                   <p className="mt-1 font-semibold text-[var(--navy)]">
-                    {shipment.customer_name}
+                    {shipment.customerName}
                   </p>
                 </div>
 
@@ -286,7 +286,7 @@ useEffect(() => {
 
                   <p className="mt-1 font-semibold text-[var(--navy)]">
                     {new Date(
-                      shipment.created_at
+                      shipment.createdAt
                     ).toLocaleDateString()}
                   </p>
                 </div>
@@ -396,7 +396,7 @@ useEffect(() => {
 
                                 <p className="mt-1 text-xs text-gray-400">
                                   {new Date(
-                                    event.created_at
+                                    event.createdAt
                                   ).toLocaleString()}
                                 </p>
                               </>
@@ -426,12 +426,12 @@ useEffect(() => {
               <ShipmentMap
                 origin={shipment.origin}
                 destination={shipment.destination}
-                originLat={shipment.origin_lat}
-                originLng={shipment.origin_lng}
-                destinationLat={shipment.destination_lat}
-                destinationLng={shipment.destination_lng}
-                currentLat={shipment.current_lat}
-                currentLng={shipment.current_lng}
+                originLat={shipment.originLat}
+                originLng={shipment.originLng}
+                destinationLat={shipment.destinationLat}
+                destinationLng={shipment.destinationLng}
+                currentLat={shipment.currentLat}
+                currentLng={shipment.currentLng}
               />  
              
             </motion.div>
