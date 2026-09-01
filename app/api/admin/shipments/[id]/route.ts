@@ -4,6 +4,7 @@ import {
   updateShipment,
   addTrackingHistory,
 } from "@/lib/firebaseShipments";
+import { db } from "@/lib/firebaseAdmin";
 
 type RouteContext = {
   params: Promise<{
@@ -32,10 +33,7 @@ export async function GET(
       shipment,
     });
   } catch (error) {
-    console.error(
-      "Firebase get shipment error:",
-      error
-    );
+    console.error("Firebase get shipment error:", error);
 
     return NextResponse.json(
       { error: "Unable to load shipment." },
@@ -95,8 +93,7 @@ export async function PATCH(
       status,
       location: location || shipment.origin,
       description:
-        description ||
-        `Shipment status updated to ${status}.`,
+        description ||        `Shipment status updated to ${status}.`,
     });
 
     return NextResponse.json({
@@ -112,6 +109,64 @@ export async function PATCH(
     return NextResponse.json(
       {
         error: "Unable to update shipment.",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE — Delete shipment
+export async function DELETE(
+  request: Request,
+  context: RouteContext
+) {
+  try {
+    const { id } = await context.params;
+
+    const shipment = await getShipmentById(id);
+
+    if (!shipment) {
+      return NextResponse.json(
+        { error: "Shipment not found." },
+        { status: 404 }
+      );
+    }
+
+    // Delete the shipment
+    await db
+      .collection("shipments")
+      .doc(id)
+      .delete();
+
+    // Delete all tracking history belonging to this shipment
+    const historySnapshot = await db
+      .collection("tracking_history")
+      .where("shipmentId", "==", id)
+      .get();
+
+    if (!historySnapshot.empty) {
+      const batch = db.batch();
+
+      historySnapshot.docs.forEach((doc) => {
+        batch.delete(doc.ref);
+      });
+
+      await batch.commit();
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Shipment deleted successfully.",
+    });
+  } catch (error) {
+    console.error(
+      "Firebase delete shipment error:",
+      error
+    );
+
+    return NextResponse.json(
+      {
+        error: "Unable to delete shipment.",
       },
       { status: 500 }
     );

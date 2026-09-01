@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Loader2, Save, Package } from "lucide-react";
+import { ArrowLeft, Loader2, Save, Package, Trash2 } from "lucide-react";
 import LocationSearch from "@/components/LocationSearch";
 
 type Shipment = {
@@ -122,7 +122,43 @@ export default function ShipmentManagementPage() {
   setError("Please select a shipment location.");
   return;
 }
+  async function deleteShipment() {
+  const confirmed = window.confirm(
+    `Are you sure you want to delete shipment ${shipment?.tracking_number}? This action cannot be undone.`
+  );
 
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    setError("");
+    setMessage("");
+
+    const pathParts = window.location.pathname.split("/");
+    const id = pathParts[pathParts.length - 1];
+
+    const response = await fetch(
+      `/api/admin/shipments/${id}`,
+      {
+        method: "DELETE",
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      setError(
+        data.error || "Unable to delete shipment."
+      );
+      return;
+    }
+
+    window.location.href = "/admin";
+  } catch {
+    setError("Unable to connect to the server.");
+  }
+}
     try {
       setSaving(true);
 
@@ -163,6 +199,43 @@ export default function ShipmentManagementPage() {
       setError("Unable to connect to the server.");
     } finally {
       setSaving(false);
+    }
+  }
+    async function deleteShipment() {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete shipment ${shipment?.tracking_number}? This action cannot be undone.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setError("");
+      setMessage("");
+
+      const pathParts = window.location.pathname.split("/");
+      const id = pathParts[pathParts.length - 1];
+
+      const response = await fetch(
+        `/api/admin/shipments/${id}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(
+          data.error || "Unable to delete shipment."
+        );
+        return;
+      }
+
+      window.location.href = "/admin";
+    } catch {
+      setError("Unable to connect to the server.");
     }
   }
 
@@ -411,6 +484,14 @@ export default function ShipmentManagementPage() {
                 </>
               )}
             </button>
+            <button
+  type="button"
+  onClick={deleteShipment}
+  className="mt-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-6 py-3.5 text-sm font-bold text-red-600 transition hover:bg-red-100 hover:text-red-700"
+>
+  <Trash2 size={18} />
+  Delete Shipment
+</button>
           </form>
         </div>
       </div>

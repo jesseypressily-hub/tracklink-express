@@ -69,16 +69,25 @@ export default function Navbar() {
             </Link>
           ))}
 
-          <Link
-            href="/tracking"
-            className="group flex items-center gap-2 rounded-xl bg-[var(--blue)] px-5 py-3 text-sm font-bold text-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
-          >
-            Track Package
-            <ArrowRight
-              size={16}
-              className="transition-transform duration-300 group-hover:translate-x-1"
-            />
-          </Link>
+          <div className="flex items-center gap-3">
+  <Link
+    href="/contact#quote"
+    className="flex items-center gap-2 rounded-xl border border-[var(--blue)] px-5 py-3 text-sm font-bold text-[var(--blue)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-blue-50"
+  >
+    Get a Quote
+  </Link>
+
+  <Link
+    href="/tracking"
+    className="group flex items-center gap-2 rounded-xl bg-[var(--blue)] px-5 py-3 text-sm font-bold text-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
+  >
+    Track Package
+    <ArrowRight
+      size={16}
+      className="transition-transform duration-300 group-hover:translate-x-1"
+    />
+  </Link>
+</div>
         </div>
 
         {/* Mobile Menu Button */}
@@ -113,14 +122,24 @@ export default function Navbar() {
               </Link>
             ))}
 
-            <Link
-              href="/tracking"
-              onClick={() => setMenuOpen(false)}
-              className="mt-2 flex items-center justify-center gap-2 rounded-xl bg-[var(--blue)] px-5 py-3.5 text-sm font-bold text-white"
-            >
-              Track Package
-              <ArrowRight size={16} />
-            </Link>
+            <div className="mt-2 flex flex-col gap-2">
+  <Link
+    href="/contact#quote"
+    onClick={() => setMenuOpen(false)}
+    className="flex items-center justify-center gap-2 rounded-xl border border-[var(--blue)] px-5 py-3.5 text-sm font-bold text-[var(--blue)]"
+  >
+    Get a Quote
+  </Link>
+
+  <Link
+    href="/tracking"
+    onClick={() => setMenuOpen(false)}
+    className="flex items-center justify-center gap-2 rounded-xl bg-[var(--blue)] px-5 py-3.5 text-sm font-bold text-white"
+  >
+    Track Package
+    <ArrowRight size={16} />
+  </Link>
+</div>
           </div>
         </div>
       </div>

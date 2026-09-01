@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowRight, Play, ShieldCheck, Truck } from "lucide-react";
+import { ArrowRight, ShieldCheck, Truck } from "lucide-react";
 
 const HERO_IMAGE = "/images/hero/hero-logistics.jpg";
 
@@ -84,13 +84,13 @@ export default function Hero() {
                />
               </Link>
 
-              <a
-                href="/services"
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/5 px-6 py-3.5 text-sm font-bold text-white backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:bg-white/10"
-              >
-                <Play size={16} />
-                Explore Services
-              </a>
+              <Link
+  href="/contact#quote"
+  className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/5 px-6 py-3.5 text-sm font-bold text-white backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:bg-white/10"
+>
+  Get a Quote
+  <ArrowRight size={17} />
+</Link>
             </motion.div>
 
             {/* Trust indicators */}

@@ -170,3 +170,23 @@ export async function getTrackingHistory(
         new Date(b.createdAt).getTime()
     );
 }
+export async function deleteShipment(id: string) {
+  const shipmentRef = db.collection("shipments").doc(id);
+
+  // Find all tracking history belonging to this shipment
+  const historySnapshot = await db
+    .collection("tracking_history")
+    .where("shipmentId", "==", id)
+    .get();
+
+  // Delete everything together
+  const batch = db.batch();
+
+  historySnapshot.docs.forEach((doc) => {
+    batch.delete(doc.ref);
+  });
+
+  batch.delete(shipmentRef);
+
+  await batch.commit();
+}

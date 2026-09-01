@@ -17,10 +17,48 @@ import Footer from "@/components/layout/Footer";
 export default function ContactPage() {
   const [quoteSent, setQuoteSent] = useState(false);
 
-  function handleQuoteSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function handleQuoteSubmit(
+  event: FormEvent<HTMLFormElement>
+) {
+  event.preventDefault();
+
+  const form = event.currentTarget;
+  const formData = new FormData(form);
+
+  try {
+    const response = await fetch("/api/quote", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: formData.get("name"),
+        email: formData.get("email"),
+        phone: formData.get("phone"),
+        service: formData.get("service"),
+        origin: formData.get("origin"),
+        destination: formData.get("destination"),
+        packageType: formData.get("packageType"),
+        weight: formData.get("weight"),
+        message: formData.get("message"),
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.error || "Unable to submit quote request."
+      );
+    }
+
     setQuoteSent(true);
+    form.reset();
+  } catch (error) {
+    console.error("Quote submission error:", error);
+    alert("Unable to submit your quote request. Please try again.");
   }
+}
 
   return (
     <>
@@ -160,7 +198,7 @@ export default function ContactPage() {
             </div>
           </div>
         </section>
-        ```tsx
+      
 {/* Get a Quote */}
 <section className="bg-[var(--light-gray)] px-5 py-20 sm:px-6 lg:px-8 lg:py-28">
   <div className="mx-auto max-w-6xl">
@@ -202,6 +240,7 @@ export default function ContactPage() {
 
           <input
             id="quote-name"
+            name="name"
             type="text"
             placeholder="John Doe"
             className="w-full rounded-xl border border-gray-300 px-4 py-3.5 text-sm outline-none transition focus:border-[var(--blue)] focus:ring-4 focus:ring-blue-100"
@@ -219,6 +258,7 @@ export default function ContactPage() {
 
           <input
             id="quote-email"
+            name="email"
             type="email"
             placeholder="john@example.com"
             className="w-full rounded-xl border border-gray-300 px-4 py-3.5 text-sm outline-none transition focus:border-[var(--blue)] focus:ring-4 focus:ring-blue-100"
@@ -236,6 +276,7 @@ export default function ContactPage() {
 
           <input
             id="quote-phone"
+            name="phone"
             type="tel"
             placeholder="+1 (800) 555-0147"
             className="w-full rounded-xl border border-gray-300 px-4 py-3.5 text-sm outline-none transition focus:border-[var(--blue)] focus:ring-4 focus:ring-blue-100"
@@ -253,6 +294,7 @@ export default function ContactPage() {
 
           <select
             id="quote-service"
+            name="service"
             defaultValue=""
             className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3.5 text-sm outline-none transition focus:border-[var(--blue)] focus:ring-4 focus:ring-blue-100"
           >
@@ -288,6 +330,7 @@ export default function ContactPage() {
 
           <input
             id="quote-origin"
+            name="origin"
             type="text"
             placeholder="Los Angeles, CA"
             className="w-full rounded-xl border border-gray-300 px-4 py-3.5 text-sm outline-none transition focus:border-[var(--blue)] focus:ring-4 focus:ring-blue-100"
@@ -305,6 +348,7 @@ export default function ContactPage() {
 
           <input
             id="quote-destination"
+            name="destination"
             type="text"
             placeholder="New York, NY"
             className="w-full rounded-xl border border-gray-300 px-4 py-3.5 text-sm outline-none transition focus:border-[var(--blue)] focus:ring-4 focus:ring-blue-100"
@@ -322,6 +366,7 @@ export default function ContactPage() {
 
           <select
             id="quote-package"
+            name="packageType"
             defaultValue=""
             className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3.5 text-sm outline-none transition focus:border-[var(--blue)] focus:ring-4 focus:ring-blue-100"
           >
@@ -347,6 +392,7 @@ export default function ContactPage() {
 
           <input
             id="quote-weight"
+            name="weight"
             type="number"
             min="0"
             placeholder="e.g. 5 kg"
@@ -366,6 +412,7 @@ export default function ContactPage() {
           <textarea
             id="quote-message"
             rows={5}
+            name="message"
             placeholder="Tell us anything else we should know about your shipment..."
             className="w-full resize-none rounded-xl border border-gray-300 px-4 py-3.5 text-sm outline-none transition focus:border-[var(--blue)] focus:ring-4 focus:ring-blue-100"
           />
