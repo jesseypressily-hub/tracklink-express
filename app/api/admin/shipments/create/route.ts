@@ -8,22 +8,95 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
 
-    const customerName = body.customerName?.trim();
+    // -----------------------------
+    // Sender
+    // -----------------------------
+    const senderName = body.senderName?.trim();
+    const senderPhone = body.senderPhone?.trim();
+    const senderAddress = body.senderAddress?.trim();
+
+    // -----------------------------
+    // Recipient
+    // -----------------------------
+    const recipientName = body.recipientName?.trim();
+    const recipientPhone = body.recipientPhone?.trim();
+    const recipientAddress = body.recipientAddress?.trim();
+
+    // -----------------------------
+    // Shipment
+    // -----------------------------
     const origin = body.origin?.trim();
     const destination = body.destination?.trim();
+
     const status =
       body.status?.trim() || "Shipment Created";
 
+    // -----------------------------
+    // Package
+    // -----------------------------
+    const serviceType =
+      body.serviceType?.trim() || "Standard";
+
+    const packageType =
+      body.packageType?.trim() || "Parcel";
+
+    const weight = Number(body.weight);
+    const numberOfPackages = Number(body.numberOfPackages);
+
+    // -----------------------------
+    // Optional fields
+    // -----------------------------
+    const estimatedDelivery =
+      body.estimatedDelivery?.trim() || "";
+
+    const shippingCost =
+      body.shippingCost !== undefined &&
+      body.shippingCost !== ""
+        ? Number(body.shippingCost)
+        : undefined;
+
+    const otherFees =
+      body.otherFees !== undefined &&
+      body.otherFees !== ""
+        ? Number(body.otherFees)
+        : undefined;
+
+    const totalAmount =
+      body.totalAmount !== undefined &&
+      body.totalAmount !== ""
+        ? Number(body.totalAmount)
+        : undefined;
+
+    // -----------------------------
+    // Coordinates
+    // -----------------------------
     const originLat = Number(body.originLat);
     const originLng = Number(body.originLng);
-    const destinationLat = Number(body.destinationLat);
-    const destinationLng = Number(body.destinationLng);
 
-    if (!customerName || !origin || !destination) {
+    const destinationLat = Number(
+      body.destinationLat
+    );
+    const destinationLng = Number(
+      body.destinationLng
+    );
+
+    // -----------------------------
+    // Required field validation
+    // -----------------------------
+    if (
+      !senderName ||
+      !senderPhone ||
+      !senderAddress ||
+      !recipientName ||
+      !recipientPhone ||
+      !recipientAddress ||
+      !origin ||
+      !destination
+    ) {
       return NextResponse.json(
         {
           error:
-            "Customer name, origin, and destination are required.",
+            "Sender, recipient, origin, and destination information are required.",
         },
         { status: 400 }
       );
@@ -44,14 +117,78 @@ export async function POST(request: Request) {
       );
     }
 
+    if (
+      !Number.isFinite(weight) ||
+      weight <= 0
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "A valid package weight is required.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (
+      !Number.isFinite(numberOfPackages) ||
+      numberOfPackages < 1
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "At least one package is required.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (
+      shippingCost !== undefined &&
+      !Number.isFinite(shippingCost)
+    ) {
+      return NextResponse.json(
+        {
+          error: "Invalid shipping cost.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (
+      otherFees !== undefined &&
+      !Number.isFinite(otherFees)
+    ) {
+      return NextResponse.json(
+        {
+          error: "Invalid additional fees.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (
+      totalAmount !== undefined &&
+      !Number.isFinite(totalAmount)
+    ) {
+      return NextResponse.json(
+        {
+          error: "Invalid total amount.",
+        },
+        { status: 400 }
+      );
+    }
+
     /*
-     * Get existing shipments to determine the next
-     * TrackLink Express tracking number.
+     * Get existing shipments to determine
+     * the next TrackLink Express tracking number.
      *
      * Example:
-     * TLX-2026-100482
+     * TLX-2026-000101
      */
-    const { db } = await import("@/lib/firebaseAdmin");
+    const { db } = await import(
+      "@/lib/firebaseAdmin"
+    );
 
     const snapshot = await db
       .collection("shipments")
@@ -66,7 +203,9 @@ export async function POST(request: Request) {
         snapshot.docs[0].data().trackingNumber;
 
       const parts = latestTracking.split("-");
-      const lastNumber = Number(parts[parts.length - 1]);
+      const lastNumber = Number(
+        parts[parts.length - 1]
+      );
 
       if (Number.isFinite(lastNumber)) {
         nextNumber = lastNumber + 1;
@@ -84,21 +223,48 @@ export async function POST(request: Request) {
      */
     const shipmentId = await createShipment({
       trackingNumber,
-      customerName,
+
+      // Sender
+      senderName,
+      senderPhone,
+      senderAddress,
+
+      // Recipient
+      recipientName,
+      recipientPhone,
+      recipientAddress,
+
+      // Shipment
       origin,
       destination,
       currentStatus: status,
 
+      // Coordinates
       originLat,
       originLng,
-
       destinationLat,
       destinationLng,
 
       currentLat: originLat,
       currentLng: originLng,
+
+      // Package
+      serviceType,
+      packageType,
+      weight,
+      numberOfPackages,
+
+      // Optional
+      estimatedDelivery:
+        estimatedDelivery || undefined,
+      shippingCost,
+      otherFees,
+      totalAmount,
     });
 
+    /*
+     * Create the first tracking event automatically.
+     */
     await addTrackingHistory({
       shipmentId,
       status,
@@ -111,7 +277,9 @@ export async function POST(request: Request) {
       {
         success: true,
         trackingNumber,
-        message: "Shipment created successfully.",
+        shipmentId,
+        message:
+          "Shipment created successfully.",
       },
       { status: 201 }
     );

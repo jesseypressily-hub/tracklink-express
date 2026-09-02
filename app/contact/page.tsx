@@ -125,7 +125,7 @@ export default function ContactPage() {
                       </p>
 
                       <p className="mt-1 text-sm text-gray-600">
-                        +1 (800) 555-0147
+                        +44 7882 506376
                       </p>
                     </div>
                   </div>
@@ -142,7 +142,7 @@ export default function ContactPage() {
                       </p>
 
                       <p className="mt-1 text-sm text-gray-600">
-                        support@tracklinkexpress.com
+                        tracklinkexpress1@gmail.com
                       </p>
                     </div>
                   </div>
@@ -159,7 +159,7 @@ export default function ContactPage() {
                       </p>
 
                       <p className="mt-1 text-sm text-gray-600">
-                        Los Angeles, California, USA
+                        Plymouth, Devon, United Kingdom
                       </p>
                     </div>
                   </div>
@@ -332,7 +332,7 @@ export default function ContactPage() {
             id="quote-origin"
             name="origin"
             type="text"
-            placeholder="Los Angeles, CA"
+            placeholder="Plymouth, Devon"
             className="w-full rounded-xl border border-gray-300 px-4 py-3.5 text-sm outline-none transition focus:border-[var(--blue)] focus:ring-4 focus:ring-blue-100"
           />
         </div>
@@ -350,7 +350,7 @@ export default function ContactPage() {
             id="quote-destination"
             name="destination"
             type="text"
-            placeholder="New York, NY"
+            placeholder="Plymouth, Devon"
             className="w-full rounded-xl border border-gray-300 px-4 py-3.5 text-sm outline-none transition focus:border-[var(--blue)] focus:ring-4 focus:ring-blue-100"
           />
         </div>
@@ -623,8 +623,8 @@ export default function ContactPage() {
         </h2>
 
         <p className="mt-5 leading-7 text-gray-600">
-          TrackLink Express is headquartered in Los Angeles,
-          California. Our logistics network is designed to connect
+          TrackLink Express is headquartered in Plymouth, Devon, United Kingdom.
+          Our logistics network is designed to connect
           shipments across cities and borders.
         </p>
 
@@ -640,7 +640,7 @@ export default function ContactPage() {
               </p>
 
               <p className="mt-1 text-sm leading-6 text-gray-600">
-                Los Angeles, California, USA
+                Plymouth, Devon, United Kingdom
               </p>
             </div>
           </div>
@@ -657,7 +657,7 @@ export default function ContactPage() {
           </div>
 
           <h3 className="mt-5 text-xl font-bold text-[var(--navy)]">
-            Los Angeles, California
+            Plymouth, Devon, United Kingdom
           </h3>
 
           <p className="mt-2 text-sm text-gray-500">

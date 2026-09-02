@@ -36,18 +36,18 @@ export default function ContactCTA() {
               <div className="mt-7 flex flex-col gap-4 text-sm text-white/70 sm:flex-row sm:gap-7">
                 <div className="flex items-center gap-2">
                   <Mail size={18} className="text-blue-300" />
-                  support@tracklinkexpress.com
+                  tracklinkexpress1@gmail.com
                 </div>
 
                 <div className="flex items-center gap-2">
                   <Phone size={18} className="text-blue-300" />
-                  +1 (800) 555-0199
+                  +44 7882 506376
                 </div>
               </div>
             </div>
 
             <a
-              href="mailto:support@tracklinkexpress.com"
+              href="tracklinkexpress1@gmail.com"
               className="group inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--blue)] px-7 py-4 text-sm font-bold text-white transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
             >
               Contact Us

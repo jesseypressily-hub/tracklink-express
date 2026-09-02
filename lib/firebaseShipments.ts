@@ -2,18 +2,48 @@ import { db } from "@/lib/firebaseAdmin";
 
 export type FirebaseShipment = {
   id: string;
+
+  // Tracking
   trackingNumber: string;
-  customerName: string;
+  currentStatus: string;
+  createdAt: string;
+  estimatedDelivery?: string;
+
+  // Sender
+  senderName: string;
+  senderPhone: string;
+  senderAddress: string;
+
+  // Recipient
+  recipientName: string;
+  recipientPhone: string;
+  recipientAddress: string;
+
+  // Locations
   origin: string;
   destination: string;
-  currentStatus: string;
+
   originLat: number;
   originLng: number;
   destinationLat: number;
   destinationLng: number;
+
   currentLat: number;
   currentLng: number;
-  createdAt: string;
+
+  // Package
+  serviceType: string;
+  packageType: string;
+  weight: number;
+  numberOfPackages: number;
+
+  // Charges
+  shippingCost?: number;
+  otherFees?: number;
+  totalAmount?: number;
+
+  // Backward compatibility
+  customerName?: string;
 };
 
 export async function getShipments() {
@@ -60,46 +90,127 @@ export async function getShipmentById(id: string) {
 
   return {
     id: doc.id,
+
     trackingNumber: data?.trackingNumber,
-    customerName: data?.customerName,
+    currentStatus: data?.currentStatus,
+    createdAt: data?.createdAt,
+    estimatedDelivery: data?.estimatedDelivery,
+
+    senderName: data?.senderName,
+    senderPhone: data?.senderPhone,
+    senderAddress: data?.senderAddress,
+
+    recipientName: data?.recipientName,
+    recipientPhone: data?.recipientPhone,
+    recipientAddress: data?.recipientAddress,
+
     origin: data?.origin,
     destination: data?.destination,
-    currentStatus: data?.currentStatus,
+
     originLat: data?.originLat,
     originLng: data?.originLng,
     destinationLat: data?.destinationLat,
     destinationLng: data?.destinationLng,
+
     currentLat: data?.currentLat,
     currentLng: data?.currentLng,
-    createdAt: data?.createdAt,
+
+    serviceType: data?.serviceType,
+    packageType: data?.packageType,
+    weight: data?.weight,
+    numberOfPackages: data?.numberOfPackages,
+
+    shippingCost: data?.shippingCost,
+    otherFees: data?.otherFees,
+    totalAmount: data?.totalAmount,
+
+    // Keep older shipments working
+    customerName: data?.customerName,
   };
 }
 
 export async function createShipment(data: {
   trackingNumber: string;
-  customerName: string;
+
+  // Sender
+  senderName: string;
+  senderPhone: string;
+  senderAddress: string;
+
+  // Recipient
+  recipientName: string;
+  recipientPhone: string;
+  recipientAddress: string;
+
+  // Locations
   origin: string;
   destination: string;
+
   currentStatus: string;
+
   originLat: number;
   originLng: number;
   destinationLat: number;
   destinationLng: number;
+
   currentLat: number;
   currentLng: number;
+
+  // Package
+  serviceType: string;
+  packageType: string;
+  weight: number;
+  numberOfPackages: number;
+
+  // Optional
+  estimatedDelivery?: string;
+  shippingCost?: number;
+  otherFees?: number;
+  totalAmount?: number;
 }) {
   const shipmentRef = await db.collection("shipments").add({
     trackingNumber: data.trackingNumber,
-    customerName: data.customerName,
+      // Backward compatibility
+    customerName: data.senderName,
+
+    // Sender
+    senderName: data.senderName,
+    senderPhone: data.senderPhone,
+    senderAddress: data.senderAddress,
+
+    // Recipient
+    recipientName: data.recipientName,
+    recipientPhone: data.recipientPhone,
+    recipientAddress: data.recipientAddress,
+
+    // Locations
     origin: data.origin,
     destination: data.destination,
+
+    // Status
     currentStatus: data.currentStatus,
+
+    // Coordinates
     originLat: data.originLat,
     originLng: data.originLng,
     destinationLat: data.destinationLat,
     destinationLng: data.destinationLng,
+
     currentLat: data.currentLat,
     currentLng: data.currentLng,
+
+    // Package
+    serviceType: data.serviceType,
+    packageType: data.packageType,
+    weight: data.weight,
+    numberOfPackages: data.numberOfPackages,
+
+    // Optional
+    estimatedDelivery: data.estimatedDelivery || null,
+    shippingCost: data.shippingCost ?? null,
+    otherFees: data.otherFees ?? null,
+    totalAmount: data.totalAmount ?? null,
+
     createdAt: new Date().toISOString(),
   });
 
@@ -170,16 +281,15 @@ export async function getTrackingHistory(
         new Date(b.createdAt).getTime()
     );
 }
+
 export async function deleteShipment(id: string) {
   const shipmentRef = db.collection("shipments").doc(id);
 
-  // Find all tracking history belonging to this shipment
   const historySnapshot = await db
     .collection("tracking_history")
     .where("shipmentId", "==", id)
     .get();
 
-  // Delete everything together
   const batch = db.batch();
 
   historySnapshot.docs.forEach((doc) => {

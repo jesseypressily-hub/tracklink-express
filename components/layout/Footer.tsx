@@ -157,7 +157,7 @@ export default function Footer() {
                 <span>
                   100 Logistics Avenue
                   <br />
-                  New York, NY 10001
+                  Plymouth, Devon, United Kingdom
                 </span>
               </div>
 
@@ -167,7 +167,7 @@ export default function Footer() {
                   className="text-[var(--blue)]"
                 />
 
-                +1 (800) 555-0199
+                +44 7882 506376
               </div>
 
               <div className="flex items-center gap-3 text-sm text-white/55">
@@ -176,7 +176,7 @@ export default function Footer() {
                   className="text-[var(--blue)]"
                 />
 
-                support@tracklinkexpress.com
+                tracklinkexpress1@gmail.com
               </div>
 
             </div>
