@@ -21,10 +21,12 @@ type ShipmentReceiptProps = {
   trackingNumber: string;
 
   senderName: string;
+  senderEmail?: string;
   senderPhone: string;
   senderAddress: string;
 
   recipientName: string;
+  recipientEmail?: string;
   recipientPhone: string;
   recipientAddress: string;
 

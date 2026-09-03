@@ -83,11 +83,13 @@ export default function AdminPage() {
 
   // Sender
 const [senderName, setSenderName] = useState("");
+const [senderEmail, setSenderEmail] = useState("");
 const [senderPhone, setSenderPhone] = useState("");
 const [senderAddress, setSenderAddress] = useState("");
 
 // Recipient
 const [recipientName, setRecipientName] = useState("");
+const [recipientEmail, setRecipientEmail] = useState("");
 const [recipientPhone, setRecipientPhone] = useState("");
 const [recipientAddress, setRecipientAddress] = useState("");
 
@@ -112,6 +114,8 @@ const [numberOfPackages, setNumberOfPackages] =
 // Delivery
 const [estimatedDelivery, setEstimatedDelivery] =
   useState("");
+const [shipmentDate, setShipmentDate] = useState("");
+const [shipmentTime, setShipmentTime] = useState("");  
 
 // Charges
 const [shippingCost, setShippingCost] =
@@ -130,10 +134,12 @@ const [status, setStatus] =
   trackingNumber: string;
 
   senderName: string;
+  senderEmail: string;
   senderPhone: string;
   senderAddress: string;
 
   recipientName: string;
+  recipientEmail: string;
   recipientPhone: string;
   recipientAddress: string;
 
@@ -215,24 +221,24 @@ const [status, setStatus] =
   }
 }
 }, []);
-  async function loadShipments() {
-    try {
-      setLoading(true);
+async function loadShipments() {
+  try {
+    setLoading(true);
 
-      const response = await fetch("/api/admin/shipments");
-      const data = await response.json();
+    const response = await fetch("/api/admin/shipments");
+    const data = await response.json();
 
-      if (response.ok) {
-        setShipments(data);
-      } else {
-        setError(data.error || "Unable to load shipments.");
-      }
-    } catch {
-      setError("Unable to connect to the server.");
-    } finally {
-      setLoading(false);
+    if (response.ok) {
+      setShipments(data);
+    } else {
+      setError(data.error || "Unable to load shipments.");
     }
+  } catch {
+    setError("Unable to connect to the server.");
+  } finally {
+    setLoading(false);
   }
+}
   async function loadQuoteRequests() {
   try {
     const response = await fetch("/api/admin/quotes");
@@ -443,9 +449,23 @@ async function deleteQuote() {
 
   try {
     setCreating(true);
+    if (!senderEmail.trim() || !recipientEmail.trim()) {
+  setError("Sender and recipient emails are required.");
+  return;
+}
+
+if (!shipmentDate || !shipmentTime) {
+  setError("Please select the shipment date and time.");
+  return;
+}
+
+const createdAt = new Date(
+  `${shipmentDate}T${shipmentTime}:00`
+).toISOString();
 
     const response = await fetch(
       "/api/admin/shipments/create",
+      
       {
         method: "POST",
         headers: {
@@ -454,11 +474,13 @@ async function deleteQuote() {
         body: JSON.stringify({
           // Sender
           senderName,
+          senderEmail,
           senderPhone,
           senderAddress,
 
           // Recipient
           recipientName,
+          recipientEmail,
           recipientPhone,
           recipientAddress,
 
@@ -488,6 +510,7 @@ async function deleteQuote() {
 
           // Status
           status,
+          createdAt,
         }),
       }
     );
@@ -509,10 +532,12 @@ async function deleteQuote() {
       trackingNumber: data.trackingNumber,
 
       senderName,
+      senderEmail,
       senderPhone,
       senderAddress,
 
       recipientName,
+      recipientEmail,
       recipientPhone,
       recipientAddress,
 
@@ -532,7 +557,7 @@ async function deleteQuote() {
       totalAmount,
 
       status,
-      createdAt: new Date().toISOString(),
+      createdAt,
     });
 
     // Reset form
@@ -787,6 +812,21 @@ async function deleteQuote() {
           className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-[var(--blue)] focus:ring-4 focus:ring-blue-100"
         />
       </div>
+      <div>
+  <label className="mb-1 block text-sm font-medium">
+    Sender Email
+  </label>
+
+  <input
+    type="email"
+    value={senderEmail}
+    onChange={(e) =>
+      setSenderEmail(e.target.value)
+    }
+    placeholder="sender@example.com"
+    className="w-full rounded-lg border px-3 py-2"
+  />
+</div>
 
       <div className="md:col-span-2">
         <label className="mb-2 block text-sm font-bold text-gray-700">
@@ -853,6 +893,22 @@ async function deleteQuote() {
           className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-[var(--blue)] focus:ring-4 focus:ring-blue-100"
         />
       </div>
+
+      <div>
+  <label className="mb-1 block text-sm font-medium">
+    Recipient Email
+  </label>
+
+  <input
+    type="email"
+    value={recipientEmail}
+    onChange={(e) =>
+      setRecipientEmail(e.target.value)
+    }
+    placeholder="recipient@example.com"
+    className="w-full rounded-lg border px-3 py-2"
+  />
+</div>
 
       <div className="md:col-span-2">
         <label className="mb-2 block text-sm font-bold text-gray-700">
@@ -1016,6 +1072,36 @@ async function deleteQuote() {
         pricing is available.
       </p>
     </div>
+
+    <div>
+  <label className="mb-1 block text-sm font-medium">
+    Shipment Date
+  </label>
+
+  <input
+    type="date"
+    value={shipmentDate}
+    onChange={(e) =>
+      setShipmentDate(e.target.value)
+    }
+    className="w-full rounded-lg border px-3 py-2"
+  />
+</div>
+
+<div>
+  <label className="mb-1 block text-sm font-medium">
+    Shipment Time
+  </label>
+
+  <input
+    type="time"
+    value={shipmentTime}
+    onChange={(e) =>
+      setShipmentTime(e.target.value)
+    }
+    className="w-full rounded-lg border px-3 py-2"
+  />
+</div>
 
     <div className="grid gap-5 md:grid-cols-2">
 

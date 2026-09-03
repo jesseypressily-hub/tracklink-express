@@ -12,6 +12,7 @@ export async function POST(request: Request) {
     // Sender
     // -----------------------------
     const senderName = body.senderName?.trim();
+    const senderEmail = body.senderEmail?.trim();
     const senderPhone = body.senderPhone?.trim();
     const senderAddress = body.senderAddress?.trim();
 
@@ -19,6 +20,7 @@ export async function POST(request: Request) {
     // Recipient
     // -----------------------------
     const recipientName = body.recipientName?.trim();
+    const recipientEmail = body.recipientEmail?.trim();
     const recipientPhone = body.recipientPhone?.trim();
     const recipientAddress = body.recipientAddress?.trim();
 
@@ -30,6 +32,11 @@ export async function POST(request: Request) {
 
     const status =
       body.status?.trim() || "Shipment Created";
+
+    // -----------------------------
+    // Manually selected date/time
+    // -----------------------------
+    const createdAt = body.createdAt?.trim();
 
     // -----------------------------
     // Package
@@ -73,30 +80,56 @@ export async function POST(request: Request) {
     const originLat = Number(body.originLat);
     const originLng = Number(body.originLng);
 
-    const destinationLat = Number(
-      body.destinationLat
-    );
-    const destinationLng = Number(
-      body.destinationLng
-    );
+    const destinationLat = Number(body.destinationLat);
+    const destinationLng = Number(body.destinationLng);
 
     // -----------------------------
     // Required field validation
     // -----------------------------
     if (
       !senderName ||
+      !senderEmail ||
       !senderPhone ||
       !senderAddress ||
       !recipientName ||
+      !recipientEmail ||
       !recipientPhone ||
       !recipientAddress ||
       !origin ||
-      !destination
+      !destination ||
+      !createdAt
     ) {
       return NextResponse.json(
         {
           error:
-            "Sender, recipient, origin, and destination information are required.",
+            "Sender, recipient, shipment date/time, origin, and destination information are required.",
+        },
+        { status: 400 }
+      );
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (
+      !emailRegex.test(senderEmail) ||
+      !emailRegex.test(recipientEmail)
+    ) {
+      return NextResponse.json(
+        {
+          error: "Please provide valid sender and recipient email addresses.",
+        },
+        { status: 400 }
+      );
+    }
+
+    // Validate manually selected date/time
+    const parsedCreatedAt = new Date(createdAt);
+
+    if (Number.isNaN(parsedCreatedAt.getTime())) {
+      return NextResponse.json(
+        {
+          error: "Invalid shipment date or time.",
         },
         { status: 400 }
       );
@@ -182,9 +215,6 @@ export async function POST(request: Request) {
     /*
      * Get existing shipments to determine
      * the next TrackLink Express tracking number.
-     *
-     * Example:
-     * TLX-2026-000101
      */
     const { db } = await import(
       "@/lib/firebaseAdmin"
@@ -212,7 +242,8 @@ export async function POST(request: Request) {
       }
     }
 
-    const year = new Date().getFullYear();
+    const year =
+      parsedCreatedAt.getFullYear();
 
     const trackingNumber = `TLX-${year}-${String(
       nextNumber
@@ -226,11 +257,13 @@ export async function POST(request: Request) {
 
       // Sender
       senderName,
+      senderEmail,
       senderPhone,
       senderAddress,
 
       // Recipient
       recipientName,
+      recipientEmail,
       recipientPhone,
       recipientAddress,
 
@@ -254,6 +287,9 @@ export async function POST(request: Request) {
       weight,
       numberOfPackages,
 
+      // Manually selected creation time
+      createdAt,
+
       // Optional
       estimatedDelivery:
         estimatedDelivery || undefined,
@@ -263,7 +299,8 @@ export async function POST(request: Request) {
     });
 
     /*
-     * Create the first tracking event automatically.
+     * Create the first tracking event
+     * using the same manually selected time.
      */
     await addTrackingHistory({
       shipmentId,
@@ -271,6 +308,7 @@ export async function POST(request: Request) {
       location: origin,
       description:
         `Shipment created and registered at ${origin}.`,
+      createdAt,
     });
 
     return NextResponse.json(

@@ -16,6 +16,8 @@ import Footer from "@/components/layout/Footer";
 
 export default function ContactPage() {
   const [quoteSent, setQuoteSent] = useState(false);
+  const [messageSent, setMessageSent] = useState(false);
+  const [messageSending, setMessageSending] = useState(false);
 
   async function handleQuoteSubmit(
   event: FormEvent<HTMLFormElement>
@@ -59,6 +61,51 @@ export default function ContactPage() {
     alert("Unable to submit your quote request. Please try again.");
   }
 }
+async function handleMessageSubmit(
+  event: FormEvent<HTMLFormElement>
+) {
+  event.preventDefault();
+
+  setMessageSending(true);
+  setMessageSent(false);
+
+  const form = event.currentTarget;
+  const formData = new FormData(form);
+
+  try {
+    const response = await fetch("/api/contact", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: formData.get("name"),
+        email: formData.get("email"),
+        phone: formData.get("phone"),
+        subject: formData.get("subject"),
+        trackingNumber: formData.get("tracking"),
+        message: formData.get("message"),
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.error || "Unable to send your message."
+      );
+    }
+
+    setMessageSent(true);
+    form.reset();
+  } catch (error) {
+    console.error("Contact message error:", error);
+    alert("Unable to send your message. Please try again.");
+  } finally {
+    setMessageSending(false);
+  }
+}
+
 
   return (
     <>
@@ -463,8 +510,10 @@ export default function ContactPage() {
 
     <div className="mt-12 rounded-3xl border border-gray-200 bg-[var(--light-gray)] p-6 shadow-sm sm:p-8 lg:p-10">
 
-      <form className="grid gap-6 md:grid-cols-2">
-
+      <form
+          onSubmit={handleMessageSubmit}
+          className="grid gap-6 md:grid-cols-2"
+>
         {/* Name */}
         <div>
           <label
@@ -476,6 +525,7 @@ export default function ContactPage() {
 
           <input
             id="name"
+            name="name"
             type="text"
             placeholder="John Doe"
             className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3.5 text-sm outline-none transition focus:border-[var(--blue)] focus:ring-4 focus:ring-blue-100"
@@ -493,6 +543,7 @@ export default function ContactPage() {
 
           <input
             id="email"
+            name="email"    
             type="email"
             placeholder="john@example.com"
             className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3.5 text-sm outline-none transition focus:border-[var(--blue)] focus:ring-4 focus:ring-blue-100"
@@ -510,6 +561,7 @@ export default function ContactPage() {
 
           <input
             id="phone"
+            name="phone"    
             type="tel"
             placeholder="+1 (800) 555-0147"
             className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3.5 text-sm outline-none transition focus:border-[var(--blue)] focus:ring-4 focus:ring-blue-100"
@@ -527,6 +579,7 @@ export default function ContactPage() {
 
           <select
             id="subject"
+            name="subject"
             className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3.5 text-sm outline-none transition focus:border-[var(--blue)] focus:ring-4 focus:ring-blue-100"
             defaultValue=""
           >
@@ -565,6 +618,7 @@ export default function ContactPage() {
 
           <input
             id="tracking"
+            name="tracking"
             type="text"
             placeholder="Example: TLX-2026-000482"
             className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3.5 text-sm outline-none transition focus:border-[var(--blue)] focus:ring-4 focus:ring-blue-100"
@@ -582,6 +636,7 @@ export default function ContactPage() {
 
           <textarea
             id="message"
+            name="message"
             rows={6}
             placeholder="Tell us how we can help..."
             className="w-full resize-none rounded-xl border border-gray-300 bg-white px-4 py-3.5 text-sm outline-none transition focus:border-[var(--blue)] focus:ring-4 focus:ring-blue-100"
@@ -594,7 +649,7 @@ export default function ContactPage() {
             type="submit"
             className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--blue)] px-7 py-4 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:shadow-lg sm:w-auto"
           >
-            Send Message
+            {messageSending ? "Sending..." : "Send Message"}
             <ArrowRight
               size={17}
               className="transition-transform duration-300 group-hover:translate-x-1"
@@ -603,6 +658,11 @@ export default function ContactPage() {
         </div>
 
       </form>
+      {messageSent && (
+  <div className="mt-6 rounded-xl border border-green-200 bg-green-50 p-4 text-sm font-semibold text-green-700">
+    Your message has been sent successfully. Our team will get back to you shortly.
+  </div>
+)}
     </div>
   </div>
 </section>

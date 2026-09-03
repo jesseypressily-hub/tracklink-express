@@ -6,18 +6,21 @@ export type FirebaseShipment = {
   // Tracking
   trackingNumber: string;
   currentStatus: string;
-  createdAt: string;
   estimatedDelivery?: string;
 
   // Sender
   senderName: string;
+  senderEmail?: string;
   senderPhone: string;
   senderAddress: string;
 
   // Recipient
   recipientName: string;
+  recipientEmail?: string;
   recipientPhone: string;
   recipientAddress: string;
+
+  createdAt: string;
 
   // Locations
   origin: string;
@@ -49,15 +52,20 @@ export type FirebaseShipment = {
 export async function getShipments() {
   const snapshot = await db
     .collection("shipments")
-    .orderBy("createdAt", "desc")
     .get();
 
-  return snapshot.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-  }));
-}
+  return snapshot.docs
+    .map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }))
+    .sort((a: any, b: any) => {
+      const dateA = new Date(a.createdAt || 0).getTime();
+      const dateB = new Date(b.createdAt || 0).getTime();
 
+      return dateB - dateA;
+    });
+}
 export async function getShipmentByTrackingNumber(
   trackingNumber: string
 ) {
@@ -97,10 +105,12 @@ export async function getShipmentById(id: string) {
     estimatedDelivery: data?.estimatedDelivery,
 
     senderName: data?.senderName,
+    senderEmail: data?.senderEmail,
     senderPhone: data?.senderPhone,
     senderAddress: data?.senderAddress,
 
     recipientName: data?.recipientName,
+    recipientEmail: data?.recipientEmail, 
     recipientPhone: data?.recipientPhone,
     recipientAddress: data?.recipientAddress,
 
@@ -134,13 +144,16 @@ export async function createShipment(data: {
 
   // Sender
   senderName: string;
+  senderEmail: string;
   senderPhone: string;
   senderAddress: string;
 
   // Recipient
   recipientName: string;
+  recipientEmail: string;
   recipientPhone: string;
   recipientAddress: string;
+  createdAt: string;
 
   // Locations
   origin: string;
@@ -175,11 +188,13 @@ export async function createShipment(data: {
 
     // Sender
     senderName: data.senderName,
+    senderEmail: data.senderEmail,
     senderPhone: data.senderPhone,
     senderAddress: data.senderAddress,
 
     // Recipient
     recipientName: data.recipientName,
+    recipientEmail: data.recipientEmail,
     recipientPhone: data.recipientPhone,
     recipientAddress: data.recipientAddress,
 
@@ -211,7 +226,7 @@ export async function createShipment(data: {
     otherFees: data.otherFees ?? null,
     totalAmount: data.totalAmount ?? null,
 
-    createdAt: new Date().toISOString(),
+    createdAt: data.createdAt,
   });
 
   return shipmentRef.id;
@@ -248,6 +263,7 @@ export async function addTrackingHistory(data: {
   status: string;
   location: string;
   description: string;
+  createdAt?: string;
 }) {
   const historyRef = await db
     .collection("tracking_history")
@@ -256,7 +272,7 @@ export async function addTrackingHistory(data: {
       status: data.status,
       location: data.location,
       description: data.description,
-      createdAt: new Date().toISOString(),
+      createdAt: data.createdAt || new Date().toISOString(),
     });
 
   return historyRef.id;

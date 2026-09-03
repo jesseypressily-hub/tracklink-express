@@ -9,21 +9,36 @@ export async function GET(request: Request) {
       return NextResponse.json([]);
     }
 
-    const response = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=5&q=${encodeURIComponent(
-        query
-      )}`,
-      {
-        headers: {
-          "User-Agent": "TrackLinkExpress/1.0",
-        },
-      }
+    const url = new URL(
+      "https://nominatim.openstreetmap.org/search"
     );
 
+    url.searchParams.set("format", "jsonv2");
+    url.searchParams.set("addressdetails", "1");
+    url.searchParams.set("limit", "5");
+    url.searchParams.set("q", query);
+
+    const response = await fetch(url.toString(), {
+      headers: {
+        "User-Agent":
+          "TrackLinkExpress/1.0 (tracklinkexpress.com)",
+        Accept: "application/json",
+      },
+      cache: "no-store",
+    });
+
     if (!response.ok) {
+      const errorText = await response.text();
+
+      console.error("Nominatim error:", {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorText,
+      });
+
       return NextResponse.json(
-        { error: "Location search failed." },
-        { status: 500 }
+        { error: "Location search temporarily unavailable." },
+        { status: 502 }
       );
     }
 

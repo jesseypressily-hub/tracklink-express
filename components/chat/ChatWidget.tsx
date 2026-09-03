@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 
-const WHATSAPP_NUMBER = "237676124865";
+const WHATSAPP_NUMBER = "447882506376";
 
 type Message = {
   id: string;
