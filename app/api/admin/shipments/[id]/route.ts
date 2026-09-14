@@ -3,8 +3,8 @@ import {
   getShipmentById,
   updateShipment,
   addTrackingHistory,
+  deleteShipment,
 } from "@/lib/firebaseShipments";
-import { db } from "@/lib/firebaseAdmin";
 
 type RouteContext = {
   params: Promise<{
@@ -52,19 +52,30 @@ export async function PATCH(
 
     const body = await request.json();
 
-    const status = body.status?.trim();
-    const location = body.location?.trim();
-    const description = body.description?.trim();
+    const status =
+      typeof body.status === "string"
+        ? body.status.trim()
+        : "";
 
-    const currentLat =
-      typeof body.currentLat === "number"
-        ? body.currentLat
-        : undefined;
+    const location =
+      typeof body.location === "string"
+        ? body.location.trim()
+        : "";
 
-    const currentLng =
-      typeof body.currentLng === "number"
-        ? body.currentLng
-        : undefined;
+    const description =
+      typeof body.description === "string"
+        ? body.description.trim()
+        : "";
+
+    const exceptionReason =
+      typeof body.exceptionReason === "string"
+        ? body.exceptionReason.trim()
+        : "";
+
+    const customerInstruction =
+      typeof body.customerInstruction === "string"
+        ? body.customerInstruction.trim()
+        : "";
 
     if (!status) {
       return NextResponse.json(
@@ -82,23 +93,142 @@ export async function PATCH(
       );
     }
 
+    // Coordinates
+    const currentLat =
+      typeof body.currentLat === "number"
+        ? body.currentLat
+        : undefined;
+
+    const currentLng =
+      typeof body.currentLng === "number"
+        ? body.currentLng
+        : undefined;
+
+    // Event date/time
+    // This represents when the shipment event actually happened.
+    let eventDateTime = new Date().toISOString();
+
+    if (body.eventDateTime) {
+      const parsedEventDate = new Date(
+        body.eventDateTime
+      );
+
+      if (Number.isNaN(parsedEventDate.getTime())) {
+        return NextResponse.json(
+          {
+            error:
+              "Invalid tracking event date and time.",
+          },
+          { status: 400 }
+        );
+      }
+
+      eventDateTime =
+        parsedEventDate.toISOString();
+    }
+
+    // Estimated delivery
+    let estimatedDelivery:
+      | string
+      | null
+      | undefined = undefined;
+
+    if (
+      body.estimatedDelivery !== undefined
+    ) {
+      if (
+        body.estimatedDelivery === null ||
+        body.estimatedDelivery === ""
+      ) {
+        estimatedDelivery = null;
+      } else {
+        const parsedEstimatedDelivery =
+          new Date(body.estimatedDelivery);
+
+        if (
+          Number.isNaN(
+            parsedEstimatedDelivery.getTime()
+          )
+        ) {
+          return NextResponse.json(
+            {
+              error:
+                "Invalid estimated delivery date and time.",
+            },
+            { status: 400 }
+          );
+        }
+
+        estimatedDelivery =
+          parsedEstimatedDelivery.toISOString();
+      }
+    }
+
+    // This is when the administrator actually saved
+    // the update in the system.
+    const lastUpdatedAt =
+      new Date().toISOString();
+
+    const finalLocation =
+      location || shipment.origin;
+
+    const finalDescription =
+      description ||
+      `Shipment status updated to ${status}.`;
+
+    // Update the current shipment state.
     await updateShipment(id, {
       currentStatus: status,
+
       currentLat,
       currentLng,
+
+      estimatedDelivery,
+
+      latestUpdateDescription:
+        finalDescription,
+
+      exceptionReason:
+        exceptionReason || null,
+
+      customerInstruction:
+        customerInstruction || null,
+
+      lastUpdatedAt,
     });
 
+    // Add a separate tracking event.
+    // This preserves the shipment's historical record.
     await addTrackingHistory({
       shipmentId: id,
       status,
-      location: location || shipment.origin,
-      description:
-        description ||        `Shipment status updated to ${status}.`,
+
+      location: finalLocation,
+
+      description: finalDescription,
+
+      createdAt: eventDateTime,
+
+      estimatedDelivery:
+        estimatedDelivery || undefined,
+
+      exceptionReason:
+        exceptionReason || undefined,
+
+      customerInstruction:
+        customerInstruction || undefined,
+
+      currentLat:
+        currentLat ?? null,
+
+      currentLng:
+        currentLng ?? null,
     });
 
     return NextResponse.json({
       success: true,
-      message: "Shipment updated successfully.",
+      message:
+        "Shipment updated successfully.",
     });
   } catch (error) {
     console.error(
@@ -132,31 +262,12 @@ export async function DELETE(
       );
     }
 
-    // Delete the shipment
-    await db
-      .collection("shipments")
-      .doc(id)
-      .delete();
-
-    // Delete all tracking history belonging to this shipment
-    const historySnapshot = await db
-      .collection("tracking_history")
-      .where("shipmentId", "==", id)
-      .get();
-
-    if (!historySnapshot.empty) {
-      const batch = db.batch();
-
-      historySnapshot.docs.forEach((doc) => {
-        batch.delete(doc.ref);
-      });
-
-      await batch.commit();
-    }
+    await deleteShipment(id);
 
     return NextResponse.json({
       success: true,
-      message: "Shipment deleted successfully.",
+      message:
+        "Shipment deleted successfully.",
     });
   } catch (error) {
     console.error(

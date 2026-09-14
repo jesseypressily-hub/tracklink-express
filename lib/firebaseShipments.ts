@@ -8,6 +8,12 @@ export type FirebaseShipment = {
   currentStatus: string;
   estimatedDelivery?: string;
 
+  // Latest customer-facing update
+  latestUpdateDescription?: string;
+  exceptionReason?: string;
+  customerInstruction?: string;
+  lastUpdatedAt?: string;
+
   // Sender
   senderName: string;
   senderEmail?: string;
@@ -49,6 +55,23 @@ export type FirebaseShipment = {
   customerName?: string;
 };
 
+export type TrackingHistoryEvent = {
+  id: string;
+  shipmentId: string;
+  status: string;
+  location: string;
+  description: string;
+  createdAt: string;
+
+  // Optional professional tracking information
+  estimatedDelivery?: string;
+  exceptionReason?: string;
+  customerInstruction?: string;
+
+  currentLat?: number | null;
+  currentLng?: number | null;
+};
+
 export async function getShipments() {
   const snapshot = await db
     .collection("shipments")
@@ -66,6 +89,7 @@ export async function getShipments() {
       return dateB - dateA;
     });
 }
+
 export async function getShipmentByTrackingNumber(
   trackingNumber: string
 ) {
@@ -88,7 +112,10 @@ export async function getShipmentByTrackingNumber(
 }
 
 export async function getShipmentById(id: string) {
-  const doc = await db.collection("shipments").doc(id).get();
+  const doc = await db
+    .collection("shipments")
+    .doc(id)
+    .get();
 
   if (!doc.exists) {
     return null;
@@ -99,21 +126,37 @@ export async function getShipmentById(id: string) {
   return {
     id: doc.id,
 
+    // Tracking
     trackingNumber: data?.trackingNumber,
     currentStatus: data?.currentStatus,
     createdAt: data?.createdAt,
     estimatedDelivery: data?.estimatedDelivery,
 
+    latestUpdateDescription:
+      data?.latestUpdateDescription,
+
+    exceptionReason:
+      data?.exceptionReason,
+
+    customerInstruction:
+      data?.customerInstruction,
+
+    lastUpdatedAt:
+      data?.lastUpdatedAt,
+
+    // Sender
     senderName: data?.senderName,
     senderEmail: data?.senderEmail,
     senderPhone: data?.senderPhone,
     senderAddress: data?.senderAddress,
 
+    // Recipient
     recipientName: data?.recipientName,
-    recipientEmail: data?.recipientEmail, 
+    recipientEmail: data?.recipientEmail,
     recipientPhone: data?.recipientPhone,
     recipientAddress: data?.recipientAddress,
 
+    // Locations
     origin: data?.origin,
     destination: data?.destination,
 
@@ -125,11 +168,13 @@ export async function getShipmentById(id: string) {
     currentLat: data?.currentLat,
     currentLng: data?.currentLng,
 
+    // Package
     serviceType: data?.serviceType,
     packageType: data?.packageType,
     weight: data?.weight,
     numberOfPackages: data?.numberOfPackages,
 
+    // Charges
     shippingCost: data?.shippingCost,
     otherFees: data?.otherFees,
     totalAmount: data?.totalAmount,
@@ -153,6 +198,7 @@ export async function createShipment(data: {
   recipientEmail: string;
   recipientPhone: string;
   recipientAddress: string;
+
   createdAt: string;
 
   // Locations
@@ -181,53 +227,69 @@ export async function createShipment(data: {
   otherFees?: number;
   totalAmount?: number;
 }) {
-  const shipmentRef = await db.collection("shipments").add({
-    trackingNumber: data.trackingNumber,
+  const shipmentRef = await db
+    .collection("shipments")
+    .add({
+      trackingNumber: data.trackingNumber,
+
       // Backward compatibility
-    customerName: data.senderName,
+      customerName: data.senderName,
 
-    // Sender
-    senderName: data.senderName,
-    senderEmail: data.senderEmail,
-    senderPhone: data.senderPhone,
-    senderAddress: data.senderAddress,
+      // Sender
+      senderName: data.senderName,
+      senderEmail: data.senderEmail,
+      senderPhone: data.senderPhone,
+      senderAddress: data.senderAddress,
 
-    // Recipient
-    recipientName: data.recipientName,
-    recipientEmail: data.recipientEmail,
-    recipientPhone: data.recipientPhone,
-    recipientAddress: data.recipientAddress,
+      // Recipient
+      recipientName: data.recipientName,
+      recipientEmail: data.recipientEmail,
+      recipientPhone: data.recipientPhone,
+      recipientAddress: data.recipientAddress,
 
-    // Locations
-    origin: data.origin,
-    destination: data.destination,
+      // Locations
+      origin: data.origin,
+      destination: data.destination,
 
-    // Status
-    currentStatus: data.currentStatus,
+      // Status
+      currentStatus: data.currentStatus,
 
-    // Coordinates
-    originLat: data.originLat,
-    originLng: data.originLng,
-    destinationLat: data.destinationLat,
-    destinationLng: data.destinationLng,
+      // Coordinates
+      originLat: data.originLat,
+      originLng: data.originLng,
+      destinationLat: data.destinationLat,
+      destinationLng: data.destinationLng,
 
-    currentLat: data.currentLat,
-    currentLng: data.currentLng,
+      currentLat: data.currentLat,
+      currentLng: data.currentLng,
 
-    // Package
-    serviceType: data.serviceType,
-    packageType: data.packageType,
-    weight: data.weight,
-    numberOfPackages: data.numberOfPackages,
+      // Package
+      serviceType: data.serviceType,
+      packageType: data.packageType,
+      weight: data.weight,
+      numberOfPackages: data.numberOfPackages,
 
-    // Optional
-    estimatedDelivery: data.estimatedDelivery || null,
-    shippingCost: data.shippingCost ?? null,
-    otherFees: data.otherFees ?? null,
-    totalAmount: data.totalAmount ?? null,
+      // Optional
+      estimatedDelivery:
+        data.estimatedDelivery || null,
 
-    createdAt: data.createdAt,
-  });
+      shippingCost:
+        data.shippingCost ?? null,
+
+      otherFees:
+        data.otherFees ?? null,
+
+      totalAmount:
+        data.totalAmount ?? null,
+
+      // New update fields
+      latestUpdateDescription: null,
+      exceptionReason: null,
+      customerInstruction: null,
+      lastUpdatedAt: data.createdAt,
+
+      createdAt: data.createdAt,
+    });
 
   return shipmentRef.id;
 }
@@ -236,8 +298,19 @@ export async function updateShipment(
   id: string,
   data: {
     currentStatus: string;
+
     currentLat?: number;
     currentLng?: number;
+
+    estimatedDelivery?: string | null;
+
+    latestUpdateDescription?: string | null;
+
+    exceptionReason?: string | null;
+
+    customerInstruction?: string | null;
+
+    lastUpdatedAt?: string;
   }
 ) {
   const updateData: Record<string, unknown> = {
@@ -252,6 +325,33 @@ export async function updateShipment(
     updateData.currentLng = data.currentLng;
   }
 
+  if (data.estimatedDelivery !== undefined) {
+    updateData.estimatedDelivery =
+      data.estimatedDelivery;
+  }
+
+  if (
+    data.latestUpdateDescription !== undefined
+  ) {
+    updateData.latestUpdateDescription =
+      data.latestUpdateDescription;
+  }
+
+  if (data.exceptionReason !== undefined) {
+    updateData.exceptionReason =
+      data.exceptionReason;
+  }
+
+  if (data.customerInstruction !== undefined) {
+    updateData.customerInstruction =
+      data.customerInstruction;
+  }
+
+  if (data.lastUpdatedAt !== undefined) {
+    updateData.lastUpdatedAt =
+      data.lastUpdatedAt;
+  }
+
   await db
     .collection("shipments")
     .doc(id)
@@ -264,6 +364,14 @@ export async function addTrackingHistory(data: {
   location: string;
   description: string;
   createdAt?: string;
+
+  // Optional professional tracking information
+  estimatedDelivery?: string;
+  exceptionReason?: string;
+  customerInstruction?: string;
+
+  currentLat?: number | null;
+  currentLng?: number | null;
 }) {
   const historyRef = await db
     .collection("tracking_history")
@@ -272,7 +380,25 @@ export async function addTrackingHistory(data: {
       status: data.status,
       location: data.location,
       description: data.description,
-      createdAt: data.createdAt || new Date().toISOString(),
+
+      createdAt:
+        data.createdAt ||
+        new Date().toISOString(),
+
+      estimatedDelivery:
+        data.estimatedDelivery || null,
+
+      exceptionReason:
+        data.exceptionReason || null,
+
+      customerInstruction:
+        data.customerInstruction || null,
+
+      currentLat:
+        data.currentLat ?? null,
+
+      currentLng:
+        data.currentLng ?? null,
     });
 
   return historyRef.id;
@@ -280,26 +406,53 @@ export async function addTrackingHistory(data: {
 
 export async function getTrackingHistory(
   shipmentId: string
-) {
+): Promise<TrackingHistoryEvent[]> {
   const snapshot = await db
     .collection("tracking_history")
     .where("shipmentId", "==", shipmentId)
     .get();
 
   return snapshot.docs
-    .map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }))
+    .map((doc) => {
+      const data = doc.data();
+
+      return {
+        id: doc.id,
+        shipmentId: data.shipmentId,
+        status: data.status,
+        location: data.location,
+        description: data.description,
+        createdAt: data.createdAt,
+
+        estimatedDelivery:
+          data.estimatedDelivery,
+
+        exceptionReason:
+          data.exceptionReason,
+
+        customerInstruction:
+          data.customerInstruction,
+
+        currentLat:
+          data.currentLat ?? null,
+
+        currentLng:
+          data.currentLng ?? null,
+      };
+    })
     .sort(
-      (a: any, b: any) =>
+      (a, b) =>
         new Date(a.createdAt).getTime() -
         new Date(b.createdAt).getTime()
     );
 }
 
-export async function deleteShipment(id: string) {
-  const shipmentRef = db.collection("shipments").doc(id);
+export async function deleteShipment(
+  id: string
+) {
+  const shipmentRef = db
+    .collection("shipments")
+    .doc(id);
 
   const historySnapshot = await db
     .collection("tracking_history")
