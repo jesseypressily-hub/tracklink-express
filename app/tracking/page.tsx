@@ -9,7 +9,6 @@ import {
   Loader2,
   MapPin,
   CalendarDays,
-  Clock3,
   AlertTriangle,
   Info,
 } from "lucide-react";
@@ -68,20 +67,6 @@ type TrackingEvent = {
   currentLat?: number | null;
   currentLng?: number | null;
 };
-
-const STATUS_ORDER = [
-  "Shipment Created",
-  "Package Received",
-  "Departed Facility",
-  "Shipment in Transit",
-  "Arrived at Facility",
-  "Out for Delivery",
-  "Delivered",
-  "Delayed",
-  "Delivery Exception",
-  "Available for Pickup",
-  "Returned to Sender",
-];
 
 function TrackingPageContent() {
   const [trackingNumber, setTrackingNumber] = useState("");
@@ -143,68 +128,30 @@ function TrackingPageContent() {
     }
   }, [searchParams]);
 
-  const currentStatusIndex = shipment
-    ? STATUS_ORDER.findIndex(
-        (status) =>
-          status.toLowerCase() ===
-          shipment.currentStatus.toLowerCase()
-      )
-    : -1;
-
   /*
-   * IMPORTANT:
-   * Get the newest tracking event for each status.
+   * Customer timeline
    *
-   * We intentionally do NOT delete old history.
-   * If an administrator updates "Shipment in Transit"
-   * multiple times, the newest event is what the
-   * customer should see for that milestone.
+   * The timeline follows the actual order in which
+   * tracking events were recorded by the administrator.
+   *
+   * There is intentionally NO predefined status order.
    */
-  function getLatestEventForStatus(
-    status: string
-  ): TrackingEvent | undefined {
-    const matchingEvents = history.filter(
-      (item) =>
-        item.status.toLowerCase() ===
-        status.toLowerCase()
+  const recordedEvents = history
+    .slice()
+    .sort(
+      (a, b) =>
+        new Date(a.createdAt).getTime() -
+        new Date(b.createdAt).getTime()
     );
 
-    if (matchingEvents.length === 0) {
-      return undefined;
-    }
-
-    return matchingEvents.reduce(
-      (latest, current) => {
-        const latestTime = new Date(
-          latest.createdAt
-        ).getTime();
-
-        const currentTime = new Date(
-          current.createdAt
-        ).getTime();
-
-        return currentTime > latestTime
-          ? current
-          : latest;
-      }
-    );
-  }
+  const currentEventIndex =
+    recordedEvents.length > 0
+      ? recordedEvents.length - 1
+      : -1;
 
   const latestHistoryEvent =
-    history.length > 0
-      ? history.reduce((latest, current) => {
-          const latestTime = new Date(
-            latest.createdAt
-          ).getTime();
-
-          const currentTime = new Date(
-            current.createdAt
-          ).getTime();
-
-          return currentTime > latestTime
-            ? current
-            : latest;
-        })
+    recordedEvents.length > 0
+      ? recordedEvents[recordedEvents.length - 1]
       : undefined;
 
   const latestDescription =
@@ -213,8 +160,7 @@ function TrackingPageContent() {
     "";
 
   const latestLocation =
-    latestHistoryEvent?.location ||
-    "";
+    latestHistoryEvent?.location || "";
 
   const latestEstimatedDelivery =
     shipment?.estimatedDelivery ||
@@ -472,27 +418,6 @@ function TrackingPageContent() {
                         )}
                       </div>
 
-                      {latestHistoryEvent && (
-                        <div className="flex gap-3 border-t border-gray-100 pt-4">
-                          <Clock3
-                            size={18}
-                            className="mt-0.5 shrink-0 text-gray-400"
-                          />
-
-                          <div>
-                            <p className="text-xs font-bold uppercase tracking-wider text-gray-400">
-                              Update Time
-                            </p>
-
-                            <p className="mt-1 text-sm font-semibold text-gray-600">
-                              {new Date(
-                                latestHistoryEvent.createdAt
-                              ).toLocaleString()}
-                            </p>
-                          </div>
-                        </div>
-                      )}
-
                       {latestExceptionReason && (
                         <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
                           <div className="flex gap-3">
@@ -530,197 +455,143 @@ function TrackingPageContent() {
                 )}
 
                 {/* Shipment Progress */}
-                <div className="mt-10 border-t border-gray-200 pt-8">
-                  <h2 className="text-xl font-bold text-[var(--navy)]">
-                    Shipment Progress
-                  </h2>
+                {recordedEvents.length > 0 && (
+                  <div className="mt-10 border-t border-gray-200 pt-8">
+                    <h2 className="text-xl font-bold text-[var(--navy)]">
+                      Shipment Progress
+                    </h2>
 
-                  <div className="relative mt-8">
-                    {/* Gray Background Line */}
-                    <div className="absolute bottom-2 left-[7px] top-2 w-[3px] rounded-full bg-gray-200" />
+                    <div className="relative mt-8">
+                      <div className="relative space-y-7">
+                        {recordedEvents.map(
+                          (event, index) => {
+                            const completed =
+                              index <= currentEventIndex;
 
-                    {/* Animated Blue Progress Line */}
-                    {currentStatusIndex >= 0 && (
-                      <motion.div
-                        initial={{ height: 0 }}
-                        whileInView={{
-                          height: `${
-                            (currentStatusIndex /
-                              (STATUS_ORDER.length - 1)) *
-                            100
-                          }%`,
-                        }}
-                        viewport={{
-                          once: true,
-                          amount: 0.6,
-                        }}
-                        transition={{
-                          duration: 1.8,
-                          ease: "easeInOut",
-                        }}
-                        className="absolute left-[7px] top-2 w-[3px] rounded-full bg-[var(--blue)]"
-                      />
-                    )}
+                            const current =
+                              index === currentEventIndex;
 
-                    <div className="relative space-y-7">
-                      {STATUS_ORDER.map(
-                        (status, index) => {
-                          const completed =
-                            index <=
-                            currentStatusIndex;
+                            const hasNextEvent =
+                              index <
+                              recordedEvents.length - 1;
 
-                          const current =
-                            index ===
-                            currentStatusIndex;
+                            return (
+                              <div
+                                key={`${event.id}-${index}`}
+                                className="relative flex gap-5"
+                              >
+                                {/* Timeline Line */}
+                                {hasNextEvent && (
+                                  <div className="absolute left-[7px] top-5 h-[calc(100%+1.75rem)] w-[3px] rounded-full bg-[var(--blue)]" />
+                                )}
 
-                          /*
-                           * FIX:
-                           * We now retrieve the NEWEST event
-                           * for this status instead of using
-                           * history.find(), which returned the
-                           * oldest matching event.
-                           */
-                          const event =
-                            getLatestEventForStatus(
-                              status
-                            );
+                                {/* Dot */}
+                                <motion.div
+                                  initial={{
+                                    scale: 0.7,
+                                  }}
+                                  animate={{
+                                    scale: completed
+                                      ? 1
+                                      : 0.9,
+                                  }}
+                                  transition={{
+                                    duration: 0.4,
+                                    delay: index * 0.12,
+                                  }}
+                                  className={`relative z-10 mt-1 h-4 w-4 shrink-0 rounded-full border-2 ${
+                                    completed
+                                      ? "border-[var(--blue)] bg-[var(--blue)]"
+                                      : "border-gray-300 bg-white"
+                                  } ${
+                                    current
+                                      ? "ring-4 ring-blue-100"
+                                      : ""
+                                  }`}
+                                />
 
-                          return (
-                            <div
-                              key={status}
-                              className="relative flex gap-5"
-                            >
-                              {/* Dot */}
-                              <motion.div
-                                initial={{
-                                  scale: 0.7,
-                                }}
-                                animate={{
-                                  scale: completed
-                                    ? 1
-                                    : 0.9,
-                                }}
-                                transition={{
-                                  duration: 0.4,
-                                  delay: completed
-                                    ? index * 0.15
-                                    : 0,
-                                }}
-                                className={`relative z-10 mt-1 h-4 w-4 shrink-0 rounded-full border-2 ${
-                                  completed
-                                    ? "border-[var(--blue)] bg-[var(--blue)]"
-                                    : "border-gray-300 bg-white"
-                                } ${
-                                  current
-                                    ? "ring-4 ring-blue-100"
-                                    : ""
-                                }`}
-                              />
+                                {/* Content */}
+                                <div className="min-w-0 pb-1">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <h3
+                                      className={`font-bold ${
+                                        completed
+                                          ? "text-[var(--navy)]"
+                                          : "text-gray-400"
+                                      }`}
+                                    >
+                                      {event.status}
+                                    </h3>
 
-                              {/* Content */}
-                              <div className="min-w-0">
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <h3
-                                    className={`font-bold ${
-                                      completed
-                                        ? "text-[var(--navy)]"
-                                        : "text-gray-400"
-                                    }`}
-                                  >
-                                    {status}
-                                  </h3>
+                                    {current && (
+                                      <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-blue-700">
+                                        Current
+                                      </span>
+                                    )}
+                                  </div>
 
-                                  {current && (
-                                    <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-blue-700">
-                                      Current
-                                    </span>
-                                  )}
-                                </div>
-
-                                {event &&
-                                completed ? (
-                                  <>
-                                    {/* Location */}
+                                  {event.location && (
                                     <p className="mt-1 flex items-start gap-1.5 text-sm font-bold text-gray-700">
                                       <MapPin
                                         size={15}
                                         className="mt-0.5 shrink-0 text-[var(--blue)]"
                                       />
+
                                       <span>
                                         {event.location}
                                       </span>
                                     </p>
+                                  )}
 
-                                    {/* Customer-facing update */}
+                                  {event.description && (
                                     <p className="mt-2 text-sm font-extrabold leading-6 text-[var(--navy)]">
                                       {event.description}
                                     </p>
+                                  )}
 
-                                    {/* Estimated delivery */}
-                                    {event.estimatedDelivery && (
-                                      <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-gray-600">
-                                        <CalendarDays
-                                          size={14}
-                                          className="text-[var(--blue)]"
-                                        />
-                                        Estimated delivery:{" "}
-                                        {new Date(
-                                          event.estimatedDelivery
-                                        ).toLocaleString()}
-                                      </p>
-                                    )}
+                                  {event.estimatedDelivery && (
+                                    <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-gray-600">
+                                      <CalendarDays
+                                        size={14}
+                                        className="text-[var(--blue)]"
+                                      />
 
-                                    {/* Exception */}
-                                    {event.exceptionReason && (
-                                      <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
-                                        <p className="text-xs font-bold text-amber-800">
-                                          Notice:{" "}
-                                          {
-                                            event.exceptionReason
-                                          }
-                                        </p>
-                                      </div>
-                                    )}
-
-                                    {/* Customer instruction */}
-                                    {event.customerInstruction && (
-                                      <div className="mt-2 rounded-lg border border-blue-100 bg-blue-50 p-3">
-                                        <p className="text-xs font-semibold leading-5 text-blue-900">
-                                          {
-                                            event.customerInstruction
-                                          }
-                                        </p>
-                                      </div>
-                                    )}
-
-                                    {/* Event time */}
-                                    <p className="mt-2 text-xs text-gray-400">
+                                      Estimated delivery:{" "}
                                       {new Date(
-                                        event.createdAt
+                                        event.estimatedDelivery
                                       ).toLocaleString()}
                                     </p>
-                                  </>
-                                ) : (
-                                  <p
-                                    className={`mt-1 text-sm ${
-                                      completed
-                                        ? "text-gray-500"
-                                        : "text-gray-400"
-                                    }`}
-                                  >
-                                    {completed
-                                      ? "Shipment milestone completed."
-                                      : "Pending"}
-                                  </p>
-                                )}
+                                  )}
+
+                                  {event.exceptionReason && (
+                                    <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                                      <p className="text-xs font-bold text-amber-800">
+                                        Notice:{" "}
+                                        {
+                                          event.exceptionReason
+                                        }
+                                      </p>
+                                    </div>
+                                  )}
+
+                                  {event.customerInstruction && (
+                                    <div className="mt-2 rounded-lg border border-blue-100 bg-blue-50 p-3">
+                                      <p className="text-xs font-semibold leading-5 text-blue-900">
+                                        {
+                                          event.customerInstruction
+                                        }
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          );
-                        }
-                      )}
+                            );
+                          }
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
 
                 {/* Shipment Map */}
                 <ShipmentMap
