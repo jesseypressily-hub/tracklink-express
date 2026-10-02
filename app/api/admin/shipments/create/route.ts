@@ -33,6 +33,9 @@ export async function POST(request: Request) {
     const status =
       body.status?.trim() || "Shipment Created";
 
+    const currency =
+  body.currency?.trim() || "GBP";  
+
     // -----------------------------
     // Manually selected date/time
     // -----------------------------
@@ -87,18 +90,14 @@ export async function POST(request: Request) {
     // Required field validation
     // -----------------------------
     if (
-      !senderName ||
-      !senderEmail ||
-      !senderPhone ||
-      !senderAddress ||
-      !recipientName ||
-      !recipientEmail ||
-      !recipientPhone ||
-      !recipientAddress ||
-      !origin ||
-      !destination ||
-      !createdAt
-    ) {
+  !senderName ||
+  !senderAddress ||
+  !recipientName ||
+  !recipientAddress ||
+  !origin ||
+  !destination ||
+  !createdAt
+) {
       return NextResponse.json(
         {
           error:
@@ -108,20 +107,20 @@ export async function POST(request: Request) {
       );
     }
 
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    // Basic email validation — only when provided
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    if (
-      !emailRegex.test(senderEmail) ||
-      !emailRegex.test(recipientEmail)
-    ) {
-      return NextResponse.json(
-        {
-          error: "Please provide valid sender and recipient email addresses.",
-        },
-        { status: 400 }
-      );
-    }
+if (
+  (senderEmail && !emailRegex.test(senderEmail)) ||
+  (recipientEmail && !emailRegex.test(recipientEmail))
+) {
+  return NextResponse.json(
+    {
+      error: "Please provide valid email addresses when entered.",
+    },
+    { status: 400 }
+  );
+}
 
     // Validate manually selected date/time
     const parsedCreatedAt = new Date(createdAt);
@@ -271,6 +270,7 @@ export async function POST(request: Request) {
       origin,
       destination,
       currentStatus: status,
+      currency,
 
       // Coordinates
       originLat,

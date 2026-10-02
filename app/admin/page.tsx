@@ -123,6 +123,7 @@ const [shippingCost, setShippingCost] =
 
 const [otherFees, setOtherFees] =
   useState("");
+const [currency, setCurrency] = useState("GBP");   
 
 // Shipment status
 const [status, setStatus] =
@@ -156,6 +157,7 @@ const [status, setStatus] =
   shippingCost?: number;
   otherFees?: number;
   totalAmount?: number;
+  currency?: string;
 
   status: string;
   createdAt: string;
@@ -366,11 +368,6 @@ async function deleteQuote() {
     return;
   }
 
-  if (!senderPhone.trim()) {
-    setError("Please enter the sender phone number.");
-    return;
-  }
-
   if (!senderAddress.trim()) {
     setError("Please enter the sender address.");
     return;
@@ -378,11 +375,6 @@ async function deleteQuote() {
 
   if (!recipientName.trim()) {
     setError("Please enter the recipient name.");
-    return;
-  }
-
-  if (!recipientPhone.trim()) {
-    setError("Please enter the recipient phone number.");
     return;
   }
 
@@ -449,10 +441,6 @@ async function deleteQuote() {
 
   try {
     setCreating(true);
-    if (!senderEmail.trim() || !recipientEmail.trim()) {
-  setError("Sender and recipient emails are required.");
-  return;
-}
 
 if (!shipmentDate || !shipmentTime) {
   setError("Please select the shipment date and time.");
@@ -510,7 +498,9 @@ const createdAt = new Date(
 
           // Status
           status,
+          currency,
           createdAt,
+          
         }),
       }
     );
@@ -557,6 +547,7 @@ const createdAt = new Date(
       totalAmount,
 
       status,
+      currency,
       createdAt,
     });
 
@@ -1121,6 +1112,31 @@ const createdAt = new Date(
       </div>
 
       <div>
+  <label className="mb-2 block text-sm font-medium text-slate-700">
+    Currency
+  </label>
+
+  <select
+    value={currency}
+    onChange={(e) => setCurrency(e.target.value)}
+    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500"
+  >
+    <option value="GBP">GBP — British Pound</option>
+    <option value="USD">USD — US Dollar</option>
+    <option value="CAD">CAD — Canadian Dollar</option>
+    <option value="EUR">EUR — Euro</option>
+    <option value="AUD">AUD — Australian Dollar</option>
+    <option value="JPY">JPY — Japanese Yen</option>
+    <option value="CHF">CHF — Swiss Franc</option>
+    <option value="CNY">CNY — Chinese Yuan</option>
+    <option value="AED">AED — UAE Dirham</option>
+    <option value="ZAR">ZAR — South African Rand</option>
+    <option value="NGN">NGN — Nigerian Naira</option>
+    <option value="XAF">XAF — Central African CFA Franc</option>
+  </select>
+</div>
+
+      <div>
         <label className="mb-2 block text-sm font-bold text-gray-700">
           Shipping Cost (£)
         </label>
@@ -1480,10 +1496,12 @@ const createdAt = new Date(
   trackingNumber={receipt.trackingNumber}
 
   senderName={receipt.senderName}
+  senderEmail={receipt.senderEmail}
   senderPhone={receipt.senderPhone}
   senderAddress={receipt.senderAddress}
 
   recipientName={receipt.recipientName}
+  recipientEmail={receipt.recipientEmail}
   recipientPhone={receipt.recipientPhone}
   recipientAddress={receipt.recipientAddress}
 
@@ -1500,10 +1518,11 @@ const createdAt = new Date(
   shippingCost={receipt.shippingCost}
   otherFees={receipt.otherFees}
   totalAmount={receipt.totalAmount}
+  currency={receipt.currency}
 
   status={receipt.status}
   createdAt={receipt.createdAt}
-
+  
   onClose={() => setReceipt(null)}
 />
 )}

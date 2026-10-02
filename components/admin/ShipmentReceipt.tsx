@@ -22,12 +22,12 @@ type ShipmentReceiptProps = {
 
   senderName: string;
   senderEmail?: string;
-  senderPhone: string;
+  senderPhone?: string;
   senderAddress: string;
 
   recipientName: string;
   recipientEmail?: string;
-  recipientPhone: string;
+  recipientPhone?: string;
   recipientAddress: string;
 
   origin: string;
@@ -43,6 +43,7 @@ type ShipmentReceiptProps = {
   shippingCost?: number;
   otherFees?: number;
   totalAmount?: number;
+  currency?: string;
 
   status: string;
   createdAt: string;
@@ -50,14 +51,131 @@ type ShipmentReceiptProps = {
   onClose: () => void;
 };
 
+const CURRENCY_CONFIG: Record<
+  string,
+  {
+    locale: string;
+    currency: string;
+  }
+> = {
+  GBP: {
+    locale: "en-GB",
+    currency: "GBP",
+  },
+  USD: {
+    locale: "en-US",
+    currency: "USD",
+  },
+  CAD: {
+    locale: "en-CA",
+    currency: "CAD",
+  },
+  EUR: {
+    locale: "de-DE",
+    currency: "EUR",
+  },
+  AUD: {
+    locale: "en-AU",
+    currency: "AUD",
+  },
+  JPY: {
+    locale: "ja-JP",
+    currency: "JPY",
+  },
+  CHF: {
+    locale: "de-CH",
+    currency: "CHF",
+  },
+  CNY: {
+    locale: "zh-CN",
+    currency: "CNY",
+  },
+  AED: {
+    locale: "en-AE",
+    currency: "AED",
+  },
+  ZAR: {
+    locale: "en-ZA",
+    currency: "ZAR",
+  },
+  NGN: {
+    locale: "en-NG",
+    currency: "NGN",
+  },
+  XAF: {
+    locale: "fr-CM",
+    currency: "XAF",
+  },
+};
+
+function getCurrencyConfig(currency?: string) {
+  return (
+    CURRENCY_CONFIG[currency || "GBP"] ||
+    CURRENCY_CONFIG.GBP
+  );
+}
+
+function formatMoney(
+  amount: number | undefined,
+  currency = "GBP"
+) {
+  if (amount === undefined || amount === null) {
+    return "—";
+  }
+
+  const config = getCurrencyConfig(currency);
+
+  return new Intl.NumberFormat(config.locale, {
+    style: "currency",
+    currency: config.currency,
+    minimumFractionDigits:
+      config.currency === "JPY" ? 0 : 2,
+    maximumFractionDigits:
+      config.currency === "JPY" ? 0 : 2,
+  }).format(amount);
+}
+
+function formatPdfMoney(
+  amount: number | undefined,
+  currency = "GBP"
+) {
+  if (amount === undefined || amount === null) {
+    return "—";
+  }
+
+  const config = getCurrencyConfig(currency);
+
+  /*
+   * Standard jsPDF fonts do not reliably support every
+   * currency symbol. Using the currency code in the PDF
+   * keeps every supported currency unambiguous.
+   *
+   * Example:
+   * USD 345.00
+   * GBP 345.00
+   * EUR 345.00
+   */
+  return `${config.currency} ${amount.toLocaleString(
+    config.locale,
+    {
+      minimumFractionDigits:
+        config.currency === "JPY" ? 0 : 2,
+      maximumFractionDigits:
+        config.currency === "JPY" ? 0 : 2,
+    }
+  )}`;
+}
+
 export default function ShipmentReceipt({
   trackingNumber,
 
   senderName,
+  senderEmail,
   senderPhone,
   senderAddress,
 
   recipientName,
+  recipientEmail,
   recipientPhone,
   recipientAddress,
 
@@ -74,6 +192,7 @@ export default function ShipmentReceipt({
   shippingCost,
   otherFees,
   totalAmount,
+  currency = "GBP",
 
   status,
   createdAt,
@@ -95,281 +214,333 @@ export default function ShipmentReceipt({
     window.print();
   }
 
- function downloadPDF() {
-  try {
-    const pdf = new jsPDF({
-      orientation: "portrait",
-      unit: "mm",
-      format: [80, 350],
-    });
+  function downloadPDF() {
+    try {
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: [80, 350],
+      });
 
-    let y = 8;
+      let y = 8;
 
-    // Helper functions
-    const line = () => {
-      pdf.setDrawColor(210, 210, 210);
-      pdf.setLineWidth(0.3);
-      pdf.line(6, y, 74, y);
-      y += 5;
-    };
+      const line = () => {
+        pdf.setDrawColor(210, 210, 210);
+        pdf.setLineWidth(0.3);
+        pdf.line(6, y, 74, y);
+        y += 5;
+      };
 
-    const sectionTitle = (title: string) => {
+      const sectionTitle = (title: string) => {
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(8);
+        pdf.text(title.toUpperCase(), 7, y);
+        y += 5;
+      };
+
+      const row = (label: string, value: string) => {
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(7);
+
+        pdf.text(label, 7, y);
+
+        const wrappedValue = pdf.splitTextToSize(
+          value || "—",
+          42
+        );
+
+        pdf.text(wrappedValue, 73, y, {
+          align: "right",
+          maxWidth: 42,
+        });
+
+        y += Math.max(
+          4.5,
+          wrappedValue.length * 4
+        );
+      };
+
+      // Header
       pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(8);
-      pdf.text(title.toUpperCase(), 7, y);
+      pdf.setFontSize(14);
+      pdf.text("TRACKLINK EXPRESS", 40, y, {
+        align: "center",
+      });
+
       y += 5;
-    };
 
-    const row = (label: string, value: string) => {
       pdf.setFont("helvetica", "normal");
-      pdf.setFontSize(7);
-
-      pdf.text(label, 7, y);
-      pdf.text(value, 73, y, { align: "right" });
-
-      y += 4.5;
-    };
-
-    // Header
-    pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(14);
-    pdf.text("TRACKLINK EXPRESS", 40, y, {
-      align: "center",
-    });
-
-    y += 5;
-
-    pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(6.5);
-    pdf.text("GLOBAL LOGISTICS & SHIPMENT SERVICES", 40, y, {
-      align: "center",
-    });
-
-    y += 5;
-
-    pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(7);
-    pdf.text("SHIPMENT RECEIPT", 40, y, {
-      align: "center",
-    });
-
-    y += 7;
-
-    // Tracking number
-    pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(6.5);
-    pdf.text("TRACKING NUMBER", 40, y, {
-      align: "center",
-    });
-
-    y += 5;
-
-    pdf.setFont("courier", "bold");
-    pdf.setFontSize(11);
-    pdf.text(trackingNumber, 40, y, {
-      align: "center",
-    });
-
-    y += 5;
-
-    // QR code
-    const qrCanvas = document.querySelector(
-      "#shipment-receipt canvas"
-    ) as HTMLCanvasElement | null;
-
-    if (qrCanvas) {
-      const qrImage = qrCanvas.toDataURL("image/png");
-
-      pdf.addImage(
-        qrImage,
-        "PNG",
-        25,
+      pdf.setFontSize(6.5);
+      pdf.text(
+        "GLOBAL LOGISTICS & SHIPMENT SERVICES",
+        40,
         y,
-        30,
-        30
+        {
+          align: "center",
+        }
       );
 
-      y += 34;
+      y += 5;
+
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(7);
+      pdf.text("SHIPMENT RECEIPT", 40, y, {
+        align: "center",
+      });
+
+      y += 7;
+
+      // Tracking number
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(6.5);
+      pdf.text("TRACKING NUMBER", 40, y, {
+        align: "center",
+      });
+
+      y += 5;
+
+      pdf.setFont("courier", "bold");
+      pdf.setFontSize(11);
+      pdf.text(trackingNumber, 40, y, {
+        align: "center",
+      });
+
+      y += 5;
+
+      // QR code
+      const qrCanvas = document.querySelector(
+        "#shipment-receipt canvas"
+      ) as HTMLCanvasElement | null;
+
+      if (qrCanvas) {
+        const qrImage = qrCanvas.toDataURL("image/png");
+
+        pdf.addImage(
+          qrImage,
+          "PNG",
+          25,
+          y,
+          30,
+          30
+        );
+
+        y += 34;
+      }
+
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(6);
+      pdf.text(
+        "Scan to track this shipment online",
+        40,
+        y,
+        {
+          align: "center",
+        }
+      );
+
+      y += 7;
+
+      line();
+
+      // Status
+      sectionTitle("Shipment Status");
+
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(8);
+      pdf.text(status, 7, y);
+
+      y += 7;
+
+      line();
+
+      // Route
+      sectionTitle("Shipment Route");
+
+      row("Origin", origin);
+      row("Destination", destination);
+
+      y += 2;
+      line();
+
+      // Sender
+      sectionTitle("Sender");
+
+      row("Name", senderName);
+
+      if (senderEmail) {
+        row("Email", senderEmail);
+      }
+
+      if (senderPhone) {
+        row("Phone", senderPhone);
+      }
+
+      row("Address", senderAddress);
+
+      y += 2;
+      line();
+
+      // Recipient
+      sectionTitle("Recipient");
+
+      row("Name", recipientName);
+
+      if (recipientEmail) {
+        row("Email", recipientEmail);
+      }
+
+      if (recipientPhone) {
+        row("Phone", recipientPhone);
+      }
+
+      row("Address", recipientAddress);
+
+      y += 2;
+      line();
+
+      // Package
+      sectionTitle("Package Information");
+
+      row("Service", serviceType);
+      row("Package Type", packageType);
+      row("Weight", `${weight} kg`);
+      row("Packages", `${numberOfPackages}`);
+
+      y += 2;
+      line();
+
+      // Delivery
+      sectionTitle("Delivery Information");
+
+      row("Shipment Date", formattedDate);
+
+      if (estimatedDelivery) {
+        row(
+          "Estimated Delivery",
+          estimatedDelivery
+        );
+      }
+
+      y += 2;
+      line();
+
+      // Charges
+      sectionTitle("Charges");
+
+      row("Currency", currency);
+
+      if (shippingCost !== undefined) {
+        row(
+          "Shipping Cost",
+          formatPdfMoney(shippingCost, currency)
+        );
+      }
+
+      if (otherFees !== undefined && otherFees > 0) {
+        row(
+          "Other Fees",
+          formatPdfMoney(otherFees, currency)
+        );
+      }
+
+      y += 2;
+
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(10);
+      pdf.text("TOTAL", 7, y);
+      pdf.text(
+        formatPdfMoney(totalAmount, currency),
+        73,
+        y,
+        {
+          align: "right",
+        }
+      );
+
+      y += 8;
+
+      line();
+
+      // Footer
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(8);
+      pdf.text("TRACKLINK EXPRESS", 40, y, {
+        align: "center",
+      });
+
+      y += 5;
+
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(6.5);
+      pdf.text(
+        "Reliable. Secure. Connected.",
+        40,
+        y,
+        {
+          align: "center",
+        }
+      );
+
+      y += 5;
+
+      pdf.text(
+        "Thank you for choosing TrackLink Express.",
+        40,
+        y,
+        {
+          align: "center",
+        }
+      );
+
+      y += 4;
+
+      pdf.text(
+        "Use your tracking number to monitor your shipment online.",
+        40,
+        y,
+        {
+          align: "center",
+        }
+      );
+
+      y += 7;
+
+      pdf.setFont("courier", "normal");
+      pdf.setFontSize(6.5);
+      pdf.text(trackingNumber, 40, y, {
+        align: "center",
+      });
+
+      y += 4;
+
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(5.5);
+      pdf.text(
+        "ELECTRONICALLY GENERATED RECEIPT",
+        40,
+        y,
+        {
+          align: "center",
+        }
+      );
+
+      /*
+       * Save the actual document we generated.
+       * No second PDF and no experimental page resizing.
+       */
+      pdf.save(`${trackingNumber}-receipt.pdf`);
+
+      console.log("PDF downloaded successfully.");
+    } catch (error) {
+      console.error(
+        "PDF generation failed:",
+        error
+      );
+
+      alert(
+        "PDF generation failed. Check the browser console."
+      );
     }
-
-    pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(6);
-    pdf.text("Scan to track this shipment online", 40, y, {
-      align: "center",
-    });
-
-    y += 7;
-
-    line();
-
-    // Status
-    sectionTitle("Shipment Status");
-
-    pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(8);
-    pdf.text(status, 7, y);
-
-    y += 7;
-
-    line();
-
-    // Route
-    sectionTitle("Shipment Route");
-
-    row("Origin", origin);
-    row("Destination", destination);
-
-    y += 2;
-    line();
-
-    // Sender
-    sectionTitle("Sender");
-
-    row("Name", senderName);
-    row("Phone", senderPhone);
-    row("Address", senderAddress);
-
-    y += 2;
-    line();
-
-    // Recipient
-    sectionTitle("Recipient");
-
-    row("Name", recipientName);
-    row("Phone", recipientPhone);
-    row("Address", recipientAddress);
-
-    y += 2;
-    line();
-
-    // Package
-    sectionTitle("Package Information");
-
-    row("Service", serviceType);
-    row("Package Type", packageType);
-    row("Weight", `${weight} kg`);
-    row("Packages", `${numberOfPackages}`);
-
-    y += 2;
-    line();
-
-    // Delivery
-    sectionTitle("Delivery Information");
-
-    row("Shipment Date", formattedDate);
-
-    if (estimatedDelivery) {
-      row("Estimated Delivery", estimatedDelivery);
-    }
-
-    y += 2;
-    line();
-
-    // Charges
-    sectionTitle("Charges");
-
-    if (shippingCost !== undefined) {
-      row("Shipping Cost", formatMoney(shippingCost));
-    }
-
-    if (otherFees !== undefined && otherFees > 0) {
-      row("Other Fees", formatMoney(otherFees));
-    }
-
-    y += 2;
-
-    pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(10);
-    pdf.text("TOTAL", 7, y);
-    pdf.text(formatMoney(totalAmount), 73, y, {
-      align: "right",
-    });
-
-    y += 8;
-
-    line();
-
-    // Footer
-    pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(8);
-    pdf.text("TRACKLINK EXPRESS", 40, y, {
-      align: "center",
-    });
-
-    y += 5;
-
-    pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(6.5);
-    pdf.text("Reliable. Secure. Connected.", 40, y, {
-      align: "center",
-    });
-
-    y += 5;
-
-    pdf.text(
-      "Thank you for choosing TrackLink Express.",
-      40,
-      y,
-      { align: "center" }
-    );
-
-    y += 4;
-
-    pdf.text(
-      "Use your tracking number to monitor your shipment online.",
-      40,
-      y,
-      { align: "center" }
-    );
-
-    y += 7;
-
-    pdf.setFont("courier", "normal");
-    pdf.setFontSize(6.5);
-    pdf.text(trackingNumber, 40, y, {
-      align: "center",
-    });
-
-    y += 4;
-
-    pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(5.5);
-    pdf.text("ELECTRONICALLY GENERATED RECEIPT", 40, y, {
-      align: "center",
-    });
-
-    // Create a correctly sized final PDF page
-    const finalHeight = y + 8;
-
-    // jsPDF cannot resize the existing page after creation,
-    // so create a new correctly-sized document.
-    const finalPdf = new jsPDF({
-      orientation: "portrait",
-      unit: "mm",
-      format: [80, finalHeight],
-    });
-
-    const pageData = pdf.output("datauristring");
-
-    // Instead of copying the page as an image, regenerate is safer.
-    // Save the original generated document for now.
-    pdf.save(`${trackingNumber}-receipt.pdf`);
-
-    console.log("PDF downloaded successfully.");
-  } catch (error) {
-    console.error("PDF generation failed:", error);
-    alert("PDF generation failed. Check the browser console.");
-  }
-}
-function formatMoney(amount?: number) {
-    if (amount === undefined || amount === null) {
-      return "—";
-    }
-
-    return `£${amount.toLocaleString("en-GB", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
   }
 
   return (
@@ -499,7 +670,10 @@ function formatMoney(amount?: number) {
           {/* Route */}
           <div className="border-b border-gray-200 px-6 py-6">
             <div className="mb-4 flex items-center gap-2">
-              <Truck size={16} className="text-[var(--blue)]" />
+              <Truck
+                size={16}
+                className="text-[var(--blue)]"
+              />
 
               <h2 className="text-xs font-black uppercase tracking-[0.16em] text-[var(--navy)]">
                 Shipment Route
@@ -551,7 +725,10 @@ function formatMoney(amount?: number) {
           {/* Sender */}
           <div className="border-b border-gray-200 px-6 py-6">
             <div className="mb-4 flex items-center gap-2">
-              <User size={16} className="text-[var(--blue)]" />
+              <User
+                size={16}
+                className="text-[var(--blue)]"
+              />
 
               <h2 className="text-xs font-black uppercase tracking-[0.16em] text-[var(--navy)]">
                 Sender
@@ -569,15 +746,29 @@ function formatMoney(amount?: number) {
                 </span>
               </div>
 
-              <div className="flex justify-between gap-4">
-                <span className="font-semibold text-gray-400">
-                  Phone
-                </span>
+              {senderEmail && (
+                <div className="flex justify-between gap-4">
+                  <span className="font-semibold text-gray-400">
+                    Email
+                  </span>
 
-                <span className="text-right font-semibold text-gray-800">
-                  {senderPhone}
-                </span>
-              </div>
+                  <span className="max-w-[240px] break-all text-right font-semibold text-gray-800">
+                    {senderEmail}
+                  </span>
+                </div>
+              )}
+
+              {senderPhone && (
+                <div className="flex justify-between gap-4">
+                  <span className="font-semibold text-gray-400">
+                    Phone
+                  </span>
+
+                  <span className="text-right font-semibold text-gray-800">
+                    {senderPhone}
+                  </span>
+                </div>
+              )}
 
               <div className="flex justify-between gap-4">
                 <span className="font-semibold text-gray-400">
@@ -594,7 +785,10 @@ function formatMoney(amount?: number) {
           {/* Recipient */}
           <div className="border-b border-gray-200 px-6 py-6">
             <div className="mb-4 flex items-center gap-2">
-              <MapPin size={16} className="text-red-500" />
+              <MapPin
+                size={16}
+                className="text-red-500"
+              />
 
               <h2 className="text-xs font-black uppercase tracking-[0.16em] text-[var(--navy)]">
                 Recipient
@@ -612,15 +806,29 @@ function formatMoney(amount?: number) {
                 </span>
               </div>
 
-              <div className="flex justify-between gap-4">
-                <span className="font-semibold text-gray-400">
-                  Phone
-                </span>
+              {recipientEmail && (
+                <div className="flex justify-between gap-4">
+                  <span className="font-semibold text-gray-400">
+                    Email
+                  </span>
 
-                <span className="text-right font-semibold text-gray-800">
-                  {recipientPhone}
-                </span>
-              </div>
+                  <span className="max-w-[240px] break-all text-right font-semibold text-gray-800">
+                    {recipientEmail}
+                  </span>
+                </div>
+              )}
+
+              {recipientPhone && (
+                <div className="flex justify-between gap-4">
+                  <span className="font-semibold text-gray-400">
+                    Phone
+                  </span>
+
+                  <span className="text-right font-semibold text-gray-800">
+                    {recipientPhone}
+                  </span>
+                </div>
+              )}
 
               <div className="flex justify-between gap-4">
                 <span className="font-semibold text-gray-400">
@@ -637,7 +845,10 @@ function formatMoney(amount?: number) {
           {/* Package Information */}
           <div className="border-b border-gray-200 px-6 py-6">
             <div className="mb-4 flex items-center gap-2">
-              <Boxes size={16} className="text-[var(--blue)]" />
+              <Boxes
+                size={16}
+                className="text-[var(--blue)]"
+              />
 
               <h2 className="text-xs font-black uppercase tracking-[0.16em] text-[var(--navy)]">
                 Package Information
@@ -666,7 +877,10 @@ function formatMoney(amount?: number) {
               </div>
 
               <div className="flex items-start gap-2">
-                <Scale size={14} className="mt-0.5 text-gray-400" />
+                <Scale
+                  size={14}
+                  className="mt-0.5 text-gray-400"
+                />
 
                 <div>
                   <p className="text-[9px] font-bold uppercase tracking-wider text-gray-400">
@@ -680,7 +894,10 @@ function formatMoney(amount?: number) {
               </div>
 
               <div className="flex items-start gap-2">
-                <Boxes size={14} className="mt-0.5 text-gray-400" />
+                <Boxes
+                  size={14}
+                  className="mt-0.5 text-gray-400"
+                />
 
                 <div>
                   <p className="text-[9px] font-bold uppercase tracking-wider text-gray-400">
@@ -698,7 +915,10 @@ function formatMoney(amount?: number) {
           {/* Delivery Information */}
           <div className="border-b border-gray-200 px-6 py-6">
             <div className="mb-4 flex items-center gap-2">
-              <Calendar size={16} className="text-[var(--blue)]" />
+              <Calendar
+                size={16}
+                className="text-[var(--blue)]"
+              />
 
               <h2 className="text-xs font-black uppercase tracking-[0.16em] text-[var(--navy)]">
                 Delivery Information
@@ -737,7 +957,10 @@ function formatMoney(amount?: number) {
             totalAmount !== undefined) && (
             <div className="border-b-2 border-dashed border-gray-300 px-6 py-6">
               <div className="mb-4 flex items-center gap-2">
-                <CreditCard size={16} className="text-[var(--blue)]" />
+                <CreditCard
+                  size={16}
+                  className="text-[var(--blue)]"
+                />
 
                 <h2 className="text-xs font-black uppercase tracking-[0.16em] text-[var(--navy)]">
                   Charges
@@ -745,6 +968,16 @@ function formatMoney(amount?: number) {
               </div>
 
               <div className="space-y-3 text-xs">
+                <div className="flex justify-between gap-4">
+                  <span className="font-semibold text-gray-500">
+                    Currency
+                  </span>
+
+                  <span className="font-bold text-gray-800">
+                    {currency}
+                  </span>
+                </div>
+
                 {shippingCost !== undefined && (
                   <div className="flex justify-between gap-4">
                     <span className="font-semibold text-gray-500">
@@ -752,22 +985,29 @@ function formatMoney(amount?: number) {
                     </span>
 
                     <span className="font-bold text-gray-800">
-                      {formatMoney(shippingCost)}
+                      {formatMoney(
+                        shippingCost,
+                        currency
+                      )}
                     </span>
                   </div>
                 )}
 
-                {otherFees !== undefined && otherFees > 0 && (
-                  <div className="flex justify-between gap-4">
-                    <span className="font-semibold text-gray-500">
-                      Other Fees
-                    </span>
+                {otherFees !== undefined &&
+                  otherFees > 0 && (
+                    <div className="flex justify-between gap-4">
+                      <span className="font-semibold text-gray-500">
+                        Other Fees
+                      </span>
 
-                    <span className="font-bold text-gray-800">
-                      {formatMoney(otherFees)}
-                    </span>
-                  </div>
-                )}
+                      <span className="font-bold text-gray-800">
+                        {formatMoney(
+                          otherFees,
+                          currency
+                        )}
+                      </span>
+                    </div>
+                  )}
 
                 {totalAmount !== undefined && (
                   <div className="mt-4 flex items-center justify-between border-t border-gray-200 pt-4">
@@ -776,7 +1016,10 @@ function formatMoney(amount?: number) {
                     </span>
 
                     <span className="text-lg font-black text-[var(--blue)]">
-                      {formatMoney(totalAmount)}
+                      {formatMoney(
+                        totalAmount,
+                        currency
+                      )}
                     </span>
                   </div>
                 )}
@@ -787,7 +1030,10 @@ function formatMoney(amount?: number) {
           {/* Footer */}
           <div className="bg-gray-50 px-6 py-7 text-center">
             <div className="flex items-center justify-center gap-2">
-              <Package size={15} className="text-[var(--blue)]" />
+              <Package
+                size={15}
+                className="text-[var(--blue)]"
+              />
 
               <p className="text-xs font-black text-[var(--navy)]">
                 TRACKLINK EXPRESS

@@ -17,13 +17,13 @@ export type FirebaseShipment = {
   // Sender
   senderName: string;
   senderEmail?: string;
-  senderPhone: string;
+  senderPhone?: string;
   senderAddress: string;
 
   // Recipient
   recipientName: string;
   recipientEmail?: string;
-  recipientPhone: string;
+  recipientPhone?: string;
   recipientAddress: string;
 
   createdAt: string;
@@ -47,6 +47,7 @@ export type FirebaseShipment = {
   numberOfPackages: number;
 
   // Charges
+  currency: string;
   shippingCost?: number;
   otherFees?: number;
   totalAmount?: number;
@@ -175,6 +176,7 @@ export async function getShipmentById(id: string) {
     numberOfPackages: data?.numberOfPackages,
 
     // Charges
+    currency: data?.currency || "GBP",
     shippingCost: data?.shippingCost,
     otherFees: data?.otherFees,
     totalAmount: data?.totalAmount,
@@ -189,14 +191,14 @@ export async function createShipment(data: {
 
   // Sender
   senderName: string;
-  senderEmail: string;
-  senderPhone: string;
+  senderEmail?: string;
+  senderPhone?: string;
   senderAddress: string;
 
   // Recipient
   recipientName: string;
-  recipientEmail: string;
-  recipientPhone: string;
+  recipientEmail?: string;
+  recipientPhone?: string;
   recipientAddress: string;
 
   createdAt: string;
@@ -206,6 +208,7 @@ export async function createShipment(data: {
   destination: string;
 
   currentStatus: string;
+  currency: string;
 
   originLat: number;
   originLng: number;
@@ -226,6 +229,7 @@ export async function createShipment(data: {
   shippingCost?: number;
   otherFees?: number;
   totalAmount?: number;
+  
 }) {
   const shipmentRef = await db
     .collection("shipments")
@@ -251,8 +255,10 @@ export async function createShipment(data: {
       origin: data.origin,
       destination: data.destination,
 
+  
       // Status
       currentStatus: data.currentStatus,
+      currency: data.currency || "GBP",
 
       // Coordinates
       originLat: data.originLat,
